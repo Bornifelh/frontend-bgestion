@@ -7,6 +7,8 @@ import { useWorkspaceStore } from '../stores/workspaceStore';
 const WS_URL = import.meta.env.VITE_WS_URL || undefined;
 
 let socket = null;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 5;
 
 export const initSocket = () => {
   const { accessToken } = useAuthStore.getState();
@@ -20,25 +22,65 @@ export const initSocket = () => {
     return socket;
   }
 
+  // Disconnect existing socket if any
+  if (socket) {
+    socket.disconnect();
+    socket = null;
+  }
+
   socket = io(WS_URL, {
     auth: {
       token: accessToken,
     },
+    // Transport configuration for reverse proxy compatibility
+    transports: ['websocket', 'polling'],
+    // Reconnection settings
     reconnection: true,
-    reconnectionAttempts: 5,
+    reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
     reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
+    // Timeout settings
+    timeout: 20000,
+    // Force new connection
+    forceNew: true,
   });
 
   socket.on('connect', () => {
     console.log('Socket connected');
+    reconnectAttempts = 0;
   });
 
   socket.on('disconnect', (reason) => {
     console.log('Socket disconnected:', reason);
+    // Don't try to reconnect if it was a manual disconnect or auth issue
+    if (reason === 'io server disconnect' || reason === 'io client disconnect') {
+      return;
+    }
   });
 
   socket.on('connect_error', (error) => {
-    console.error('Socket connection error:', error);
+    reconnectAttempts++;
+    console.error(`Socket connection error (attempt ${reconnectAttempts}):`, error.message);
+    
+    // If auth error, don't keep trying
+    if (error.message?.includes('auth') || error.message?.includes('unauthorized')) {
+      console.log('Socket auth error, stopping reconnection');
+      socket.disconnect();
+    }
+    
+    // If max attempts reached, stop gracefully
+    if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+      console.log('Max reconnection attempts reached, socket disabled');
+    }
+  });
+
+  socket.on('reconnect', (attemptNumber) => {
+    console.log(`Socket reconnected after ${attemptNumber} attempts`);
+    reconnectAttempts = 0;
+  });
+
+  socket.on('reconnect_error', (error) => {
+    console.error('Socket reconnection error:', error.message);
   });
 
   // Board events
