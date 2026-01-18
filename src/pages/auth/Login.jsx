@@ -20,9 +20,16 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      await login(formData.email, formData.password);
-      toast.success('Connexion réussie !');
-      navigate('/');
+      const result = await login(formData.email, formData.password);
+      
+      // Vérifier si l'utilisateur doit changer son mot de passe
+      if (result.user?.mustChangePassword) {
+        toast.success('Veuillez définir votre nouveau mot de passe');
+        navigate('/change-password');
+      } else {
+        toast.success('Connexion réussie !');
+        navigate('/');
+      }
     } catch (error) {
       toast.error(
         error.response?.data?.error || 'Erreur lors de la connexion'

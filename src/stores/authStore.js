@@ -10,6 +10,7 @@ export const useAuthStore = create(
       refreshToken: null,
       isAuthenticated: false,
       isLoading: true,
+      mustChangePassword: false,
 
       setLoading: (isLoading) => set({ isLoading }),
 
@@ -23,6 +24,7 @@ export const useAuthStore = create(
           refreshToken,
           isAuthenticated: true,
           isLoading: false,
+          mustChangePassword: user.mustChangePassword || false,
         });
 
         return response.data;
@@ -74,7 +76,19 @@ export const useAuthStore = create(
           refreshToken: null,
           isAuthenticated: false,
           isLoading: false,
+          mustChangePassword: false,
         });
+      },
+
+      // Change temporary password for invited users
+      changeTempPassword: async (newPassword) => {
+        await api.post('/auth/change-temp-password', { newPassword });
+        set({ mustChangePassword: false });
+      },
+
+      // Clear the mustChangePassword flag after password change
+      clearMustChangePassword: () => {
+        set({ mustChangePassword: false });
       },
 
       refreshAccessToken: async () => {
