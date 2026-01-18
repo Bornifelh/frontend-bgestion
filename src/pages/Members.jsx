@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -362,27 +362,67 @@ export default function Members() {
 
 function InviteMemberModal({ isOpen, onClose, workspaceId }) {
   const queryClient = useQueryClient();
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('member');
   const [isLoading, setIsLoading] = useState(false);
+  const [createdUser, setCreatedUser] = useState(null);
+
+  const resetForm = () => {
+    setFirstName('');
+    setLastName('');
+    setEmail('');
+    setRole('member');
+    setCreatedUser(null);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email.trim()) return;
+    if (!email.trim() || !firstName.trim() || !lastName.trim()) return;
 
     setIsLoading(true);
     try {
-      await memberApi.invite(workspaceId, { email, role });
+      const response = await memberApi.invite(workspaceId, { 
+        email, 
+        role,
+        firstName,
+        lastName
+      });
       queryClient.invalidateQueries(['members', workspaceId]);
       queryClient.invalidateQueries(['invitations', workspaceId]);
-      toast.success('Invitation envoyée');
-      onClose();
-      setEmail('');
-      setRole('member');
+      
+      // Si un nouveau compte a été créé, afficher les infos de connexion
+      if (response.data.tempPassword) {
+        setCreatedUser({
+          email,
+          firstName,
+          lastName,
+          tempPassword: response.data.tempPassword,
+          role
+        });
+        toast.success('Compte utilisateur créé avec succès');
+      } else {
+        toast.success('Membre ajouté au workspace');
+        handleClose();
+      }
     } catch (error) {
       toast.error(error.response?.data?.error || 'Erreur lors de l\'envoi');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
+
+  const copyCredentials = () => {
+    if (createdUser) {
+      const text = `Email: ${createdUser.email}\nMot de passe temporaire: ${createdUser.tempPassword}`;
+      navigator.clipboard.writeText(text);
+      toast.success('Identifiants copiés');
     }
   };
 
@@ -395,7 +435,7 @@ function InviteMemberModal({ isOpen, onClose, workspaceId }) {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="modal-overlay"
-        onClick={onClose}
+        onClick={handleClose}
       >
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -410,86 +450,196 @@ function InviteMemberModal({ isOpen, onClose, workspaceId }) {
                 <UserPlus className="w-5 h-5 text-primary-400" />
               </div>
               <h2 className="text-lg font-semibold text-surface-100">
-                Inviter un membre
+                {createdUser ? 'Compte créé' : 'Ajouter un membre'}
               </h2>
             </div>
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="p-2 rounded-lg hover:bg-surface-700 text-surface-400"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="p-6 space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-surface-300 mb-2">
-                Adresse email
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="collegue@exemple.com"
-                className="input"
-                required
-                autoFocus
-              />
-            </div>
+          {createdUser ? (
+            // Affichage des identifiants après création
+            <div className="p-6 space-y-4">
+              <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4">
+                <p className="text-green-400 text-sm font-medium mb-2">
+                  ✓ Le compte a été créé avec succès
+                </p>
+                <p className="text-surface-300 text-sm">
+                  L'utilisateur devra changer son mot de passe à la première connexion.
+                </p>
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-surface-300 mb-2">
-                Rôle
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {['admin', 'member', 'viewer'].map((r) => {
-                  const Icon = roleIcons[r];
-                  return (
-                    <button
-                      key={r}
-                      type="button"
-                      onClick={() => setRole(r)}
-                      className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${
-                        role === r
-                          ? 'border-primary-500 bg-primary-500/10'
-                          : 'border-surface-700 hover:border-surface-600'
-                      }`}
-                    >
-                      <Icon
-                        className={`w-5 h-5 ${
-                          role === r ? 'text-primary-400' : 'text-surface-400'
-                        }`}
-                      />
-                      <span
-                        className={`text-xs font-medium ${
-                          role === r ? 'text-primary-300' : 'text-surface-400'
-                        }`}
-                      >
-                        {roleLabels[r]}
-                      </span>
-                    </button>
-                  );
-                })}
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-surface-500 mb-1">
+                    Nom complet
+                  </label>
+                  <p className="text-surface-100 font-medium">
+                    {createdUser.firstName} {createdUser.lastName}
+                  </p>
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-medium text-surface-500 mb-1">
+                    Email de connexion
+                  </label>
+                  <p className="text-surface-100 font-mono bg-surface-800 px-3 py-2 rounded-lg">
+                    {createdUser.email}
+                  </p>
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-medium text-surface-500 mb-1">
+                    Mot de passe temporaire
+                  </label>
+                  <p className="text-primary-400 font-mono bg-surface-800 px-3 py-2 rounded-lg text-lg tracking-wider">
+                    {createdUser.tempPassword}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-surface-500 mb-1">
+                    Rôle assigné
+                  </label>
+                  <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium ${roleColors[createdUser.role]}`}>
+                    {React.createElement(roleIcons[createdUser.role], { className: 'w-4 h-4' })}
+                    {roleLabels[createdUser.role]}
+                  </span>
+                </div>
+              </div>
+
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 mt-4">
+                <p className="text-amber-400 text-sm">
+                  ⚠️ Communiquez ces identifiants à l'utilisateur de manière sécurisée. 
+                  Le mot de passe ne sera plus affiché après la fermeture de cette fenêtre.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={copyCredentials}
+                  className="btn btn-secondary"
+                >
+                  Copier les identifiants
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="btn btn-primary"
+                >
+                  Fermer
+                </button>
               </div>
             </div>
+          ) : (
+            // Formulaire d'ajout
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-surface-300 mb-2">
+                    Prénom *
+                  </label>
+                  <input
+                    type="text"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="Jean"
+                    className="input"
+                    required
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-surface-300 mb-2">
+                    Nom *
+                  </label>
+                  <input
+                    type="text"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder="Dupont"
+                    className="input"
+                    required
+                  />
+                </div>
+              </div>
 
-            <div className="flex items-center justify-end gap-3 pt-4">
-              <button type="button" onClick={onClose} className="btn btn-secondary">
-                Annuler
-              </button>
-              <button
-                type="submit"
-                disabled={isLoading || !email.trim()}
-                className="btn btn-primary"
-              >
-                {isLoading ? (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  'Envoyer l\'invitation'
-                )}
-              </button>
-            </div>
-          </form>
+              <div>
+                <label className="block text-sm font-medium text-surface-300 mb-2">
+                  Adresse email *
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="jean.dupont@exemple.com"
+                  className="input"
+                  required
+                />
+                <p className="text-xs text-surface-500 mt-1">
+                  Un mot de passe temporaire sera généré automatiquement
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-surface-300 mb-2">
+                  Rôle *
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {['admin', 'member', 'viewer'].map((r) => {
+                    const Icon = roleIcons[r];
+                    return (
+                      <button
+                        key={r}
+                        type="button"
+                        onClick={() => setRole(r)}
+                        className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${
+                          role === r
+                            ? 'border-primary-500 bg-primary-500/10'
+                            : 'border-surface-700 hover:border-surface-600'
+                        }`}
+                      >
+                        <Icon
+                          className={`w-5 h-5 ${
+                            role === r ? 'text-primary-400' : 'text-surface-400'
+                          }`}
+                        />
+                        <span
+                          className={`text-xs font-medium ${
+                            role === r ? 'text-primary-300' : 'text-surface-400'
+                          }`}
+                        >
+                          {roleLabels[r]}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4">
+                <button type="button" onClick={handleClose} className="btn btn-secondary">
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={isLoading || !email.trim() || !firstName.trim() || !lastName.trim()}
+                  className="btn btn-primary"
+                >
+                  {isLoading ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    'Créer le compte'
+                  )}
+                </button>
+              </div>
+            </form>
+          )}
         </motion.div>
       </motion.div>
     </AnimatePresence>

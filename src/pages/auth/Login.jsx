@@ -20,9 +20,16 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      await login(formData.email, formData.password);
-      toast.success('Connexion réussie !');
-      navigate('/');
+      const result = await login(formData.email, formData.password);
+      
+      // Vérifier si l'utilisateur doit changer son mot de passe
+      if (result.user?.mustChangePassword) {
+        toast.success('Veuillez définir votre nouveau mot de passe');
+        navigate('/change-password');
+      } else {
+        toast.success('Connexion réussie !');
+        navigate('/');
+      }
     } catch (error) {
       toast.error(
         error.response?.data?.error || 'Erreur lors de la connexion'
@@ -123,18 +130,7 @@ export default function Login() {
         </motion.button>
       </form>
 
-      {/* Demo credentials */}
-      <div className="mt-6 p-4 rounded-xl bg-surface-800/50 border border-surface-700">
-        <p className="text-xs text-surface-500 mb-2">Compte démo :</p>
-        <p className="text-sm text-surface-300">
-          Email: <code className="text-primary-400">demo@gesprojet.com</code>
-        </p>
-        <p className="text-sm text-surface-300">
-          Mot de passe: <code className="text-primary-400">demo123</code>
-        </p>
-      </div>
-
-      {/* Register link */}
+      {/* Register link
       <p className="text-center text-surface-400 mt-6">
         Pas encore de compte ?{' '}
         <Link
@@ -143,7 +139,7 @@ export default function Login() {
         >
           Créer un compte
         </Link>
-      </p>
+      </p> */}
     </div>
   );
 }

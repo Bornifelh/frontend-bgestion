@@ -3,6 +3,9 @@ import { useAuthStore } from '../stores/authStore';
 import { useBoardStore } from '../stores/boardStore';
 import { useWorkspaceStore } from '../stores/workspaceStore';
 
+// Use environment variable in production, undefined for dev (connects to same origin)
+const WS_URL = import.meta.env.VITE_WS_URL || undefined;
+
 let socket = null;
 
 export const initSocket = () => {
@@ -17,7 +20,7 @@ export const initSocket = () => {
     return socket;
   }
 
-  socket = io({
+  socket = io(WS_URL, {
     auth: {
       token: accessToken,
     },
