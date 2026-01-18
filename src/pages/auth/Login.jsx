@@ -130,18 +130,7 @@ export default function Login() {
         </motion.button>
       </form>
 
-      {/* Demo credentials */}
-      <div className="mt-6 p-4 rounded-xl bg-surface-800/50 border border-surface-700">
-        <p className="text-xs text-surface-500 mb-2">Compte démo :</p>
-        <p className="text-sm text-surface-300">
-          Email: <code className="text-primary-400">demo@gesprojet.com</code>
-        </p>
-        <p className="text-sm text-surface-300">
-          Mot de passe: <code className="text-primary-400">demo123</code>
-        </p>
-      </div>
-
-      {/* Register link */}
+      {/* Register link
       <p className="text-center text-surface-400 mt-6">
         Pas encore de compte ?{' '}
         <Link
@@ -150,7 +139,7 @@ export default function Login() {
         >
           Créer un compte
         </Link>
-      </p>
+      </p> */}
     </div>
   );
 }
