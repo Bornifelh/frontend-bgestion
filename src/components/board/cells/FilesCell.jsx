@@ -19,7 +19,7 @@ import {
   FileIcon,
   Loader2
 } from 'lucide-react';
-import { itemApi } from '../../../lib/api';
+import { itemApi, fileApi } from '../../../lib/api';
 import { useBoardStore } from '../../../stores/boardStore';
 import toast from 'react-hot-toast';
 
@@ -151,27 +151,12 @@ export default function FilesCell({ item, column, value }) {
 
     for (const file of selectedFiles) {
       try {
-        // Create a FormData to upload the file
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('itemId', item.id);
-        formData.append('columnId', column.id);
-
-        // For now, we'll store as base64 or URL - in production, upload to storage
-        const reader = new FileReader();
-        const fileData = await new Promise((resolve) => {
-          reader.onload = (e) => resolve(e.target.result);
-          reader.readAsDataURL(file);
-        });
-
-        newFiles.push({
-          id: `file-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          url: fileData,
-          uploadedAt: new Date().toISOString(),
-        });
+        // Upload file to server to get a public URL (required for Office 365 Online)
+        const response = await fileApi.upload(file, item.id, column.id);
+        
+        if (response.data?.file) {
+          newFiles.push(response.data.file);
+        }
       } catch (error) {
         console.error('Upload error:', error);
         toast.error(`Erreur lors de l'upload de ${file.name}`);
@@ -191,8 +176,19 @@ export default function FilesCell({ item, column, value }) {
   };
 
   const handleDeleteFile = async (fileId) => {
+    const fileToDelete = files.find(f => f.id === fileId);
     const newFiles = files.filter(f => f.id !== fileId);
+    
     try {
+      // Delete file from server if it has a storedName
+      if (fileToDelete?.storedName) {
+        try {
+          await fileApi.delete(fileToDelete.storedName);
+        } catch (err) {
+          console.warn('Could not delete file from server:', err);
+        }
+      }
+      
       await itemApi.updateValue(item.id, column.id, newFiles);
       updateItemValue(item.id, column.id, newFiles);
       toast.success('Fichier supprimé');

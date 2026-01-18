@@ -334,6 +334,31 @@ export const permissionApi = {
   getAuditLogs: (workspaceId, params) => api.get(`/permissions/audit/workspace/${workspaceId}`, { params }),
 };
 
+// Files API
+export const fileApi = {
+  upload: async (file, itemId, columnId) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (itemId) formData.append('itemId', itemId);
+    if (columnId) formData.append('columnId', columnId);
+    
+    return api.post('/files/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+  uploadMultiple: async (files, itemId, columnId) => {
+    const formData = new FormData();
+    files.forEach(file => formData.append('files', file));
+    if (itemId) formData.append('itemId', itemId);
+    if (columnId) formData.append('columnId', columnId);
+    
+    return api.post('/files/upload-multiple', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+  delete: (filename) => api.delete(`/files/${filename}`),
+};
+
 // Tickets API (Intervention tickets)
 export const ticketApi = {
   // Categories
