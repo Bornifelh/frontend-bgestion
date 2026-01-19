@@ -36,9 +36,16 @@ export const useBoardStore = create((set, get) => ({
 
   // Items
   addItem: (item) => {
-    set((state) => ({
-      items: [...state.items, item],
-    }));
+    set((state) => {
+      // Prevent duplicates
+      const exists = state.items.some((i) => i.id === item.id);
+      if (exists) {
+        return state;
+      }
+      return {
+        items: [...state.items, item],
+      };
+    });
   },
 
   updateItem: (itemId, updates) => {
@@ -110,9 +117,16 @@ export const useBoardStore = create((set, get) => ({
 
   // Columns
   addColumn: (column) => {
-    set((state) => ({
-      columns: [...state.columns, column],
-    }));
+    set((state) => {
+      // Prevent duplicates
+      const exists = state.columns.some((c) => c.id === column.id);
+      if (exists) {
+        return state;
+      }
+      return {
+        columns: [...state.columns, column],
+      };
+    });
   },
 
   updateColumn: (columnId, updates) => {
@@ -184,9 +198,16 @@ export const useBoardStore = create((set, get) => ({
 
   // Groups
   addGroup: (group) => {
-    set((state) => ({
-      groups: [...state.groups, group],
-    }));
+    set((state) => {
+      // Prevent duplicates
+      const exists = state.groups.some((g) => g.id === group.id);
+      if (exists) {
+        return state;
+      }
+      return {
+        groups: [...state.groups, group],
+      };
+    });
   },
 
   updateGroup: (groupId, updates) => {
