@@ -1,19 +1,17 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, Mail, Lock, ArrowRight, Sparkles } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import toast from 'react-hot-toast';
 
 export default function Login() {
   const navigate = useNavigate();
   const login = useAuthStore((state) => state.login);
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  });
+  const [formData, setFormData] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [focused, setFocused] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -22,7 +20,6 @@ export default function Login() {
     try {
       const result = await login(formData.email, formData.password);
       
-      // Vérifier si l'utilisateur doit changer son mot de passe
       if (result.user?.mustChangePassword) {
         toast.success('Veuillez définir votre nouveau mot de passe');
         navigate('/change-password');
@@ -40,74 +37,84 @@ export default function Login() {
   };
 
   return (
-    <div className="card gradient-border">
+    <div>
       {/* Mobile logo */}
-      <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
-        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center">
-          <Sparkles className="w-6 h-6 text-white" />
+      <div className="lg:hidden flex items-center justify-center gap-3 mb-10">
+        <div className="w-10 h-10 rounded-xl bg-primary-600 flex items-center justify-center">
+          <svg viewBox="0 0 24 24" className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+          </svg>
         </div>
-        <span className="font-display font-bold text-2xl gradient-text">
+        <span className="font-semibold text-xl text-surface-100 tracking-tight">
           GesProjet
         </span>
       </div>
 
-      <div className="text-center mb-8">
-        <h2 className="text-2xl font-display font-bold text-surface-100 mb-2">
-          Content de vous revoir !
+      {/* Header */}
+      <div className="mb-8">
+        <h2 className="text-[28px] font-bold text-surface-100 tracking-tight mb-2">
+          Se connecter
         </h2>
-        <p className="text-surface-400">
-          Connectez-vous pour accéder à vos projets
+        <p className="text-surface-400 text-[15px]">
+          Accédez à votre espace de gestion de projet
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Email */}
         <div>
-          <label className="block text-sm font-medium text-surface-300 mb-2">
+          <label className="block text-[13px] font-medium text-surface-300 mb-2 tracking-wide uppercase">
             Adresse email
           </label>
           <div className="relative">
-            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-surface-500" />
             <input
               type="email"
               value={formData.email}
-              onChange={(e) =>
-                setFormData({ ...formData, email: e.target.value })
-              }
-              placeholder="vous@exemple.com"
-              className="input pl-12"
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              onFocus={() => setFocused('email')}
+              onBlur={() => setFocused(null)}
+              placeholder="vous@entreprise.com"
+              className={`w-full px-4 py-3.5 bg-surface-900 border rounded-xl text-surface-100 text-[15px]
+                placeholder-surface-500/60 transition-all duration-200 outline-none
+                ${focused === 'email' 
+                  ? 'border-primary-500 ring-[3px] ring-primary-500/10' 
+                  : 'border-surface-700/80 hover:border-surface-600'
+                }`}
               required
+              autoComplete="email"
             />
           </div>
         </div>
 
         {/* Password */}
         <div>
-          <label className="block text-sm font-medium text-surface-300 mb-2">
+          <label className="block text-[13px] font-medium text-surface-300 mb-2 tracking-wide uppercase">
             Mot de passe
           </label>
           <div className="relative">
-            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-surface-500" />
             <input
               type={showPassword ? 'text' : 'password'}
               value={formData.password}
-              onChange={(e) =>
-                setFormData({ ...formData, password: e.target.value })
-              }
-              placeholder="••••••••"
-              className="input pl-12 pr-12"
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              onFocus={() => setFocused('password')}
+              onBlur={() => setFocused(null)}
+              placeholder="Entrez votre mot de passe"
+              className={`w-full px-4 py-3.5 pr-12 bg-surface-900 border rounded-xl text-surface-100 text-[15px]
+                placeholder-surface-500/60 transition-all duration-200 outline-none
+                ${focused === 'password' 
+                  ? 'border-primary-500 ring-[3px] ring-primary-500/10' 
+                  : 'border-surface-700/80 hover:border-surface-600'
+                }`}
               required
+              autoComplete="current-password"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-surface-500 hover:text-surface-300"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 rounded-lg text-surface-500 hover:text-surface-300 hover:bg-surface-800 transition-colors"
             >
-              {showPassword ? (
-                <EyeOff className="w-5 h-5" />
-              ) : (
-                <Eye className="w-5 h-5" />
-              )}
+              {showPassword ? <EyeOff className="w-[18px] h-[18px]" /> : <Eye className="w-[18px] h-[18px]" />}
             </button>
           </div>
         </div>
@@ -115,31 +122,36 @@ export default function Login() {
         {/* Submit */}
         <motion.button
           type="submit"
-          disabled={isLoading}
-          whileTap={{ scale: 0.98 }}
-          className="btn btn-primary w-full py-3.5"
+          disabled={isLoading || !formData.email || !formData.password}
+          whileTap={{ scale: 0.985 }}
+          className="relative w-full py-3.5 rounded-xl font-semibold text-[15px] text-white
+            bg-primary-600 hover:bg-primary-500 active:bg-primary-700
+            disabled:opacity-50 disabled:cursor-not-allowed
+            transition-all duration-200 shadow-lg shadow-primary-600/20 hover:shadow-primary-500/30
+            flex items-center justify-center gap-2"
         >
           {isLoading ? (
-            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            <Loader2 className="w-5 h-5 animate-spin" />
           ) : (
             <>
-              <span>Se connecter</span>
-              <ArrowRight className="w-5 h-5" />
+              <span>Continuer</span>
+              <ArrowRight className="w-4 h-4" />
             </>
           )}
         </motion.button>
       </form>
 
-      {/* Register link
-      <p className="text-center text-surface-400 mt-6">
-        Pas encore de compte ?{' '}
-        <Link
-          to="/register"
-          className="text-primary-400 hover:text-primary-300 font-medium"
-        >
-          Créer un compte
-        </Link>
-      </p> */}
+      {/* Divider */}
+      <div className="relative my-7">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-surface-800" />
+        </div>
+      </div>
+
+      {/* Footer */}
+      <p className="text-center text-surface-500 text-sm">
+        Plateforme sécurisée de gestion de projet
+      </p>
     </div>
   );
 }

@@ -16,9 +16,13 @@ import {
   GanttChart,
   X,
   Search,
+  Layers,
+  Save,
+  Star,
+  BookmarkPlus,
 } from 'lucide-react';
 import { useBoardStore } from '../../stores/boardStore';
-import { itemApi, exportApi } from '../../lib/api';
+import { itemApi, exportApi, savedFilterApi, favoriteApi } from '../../lib/api';
 import CreateColumnModal from '../modals/CreateColumnModal';
 import AutomationsModal from '../modals/AutomationsModal';
 import toast from 'react-hot-toast';
@@ -29,6 +33,7 @@ const viewOptions = [
   { id: 'calendar', label: 'Calendrier', icon: Calendar },
   { id: 'timeline', label: 'Timeline', icon: GanttChart },
   { id: 'chart', label: 'Graphiques', icon: BarChart3 },
+  { id: 'sprint', label: 'Sprint', icon: Layers },
 ];
 
 export default function BoardToolbar() {
@@ -51,8 +56,60 @@ export default function BoardToolbar() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
+  const [savedFilters, setSavedFilters] = useState([]);
+  const [showSavedFilters, setShowSavedFilters] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
   const exportMenuRef = useRef(null);
   const filterMenuRef = useRef(null);
+
+  // Load saved filters and favorite status
+  useEffect(() => {
+    if (currentBoard?.id) {
+      savedFilterApi.getByBoard(currentBoard.id).then(res => setSavedFilters(res.data || [])).catch(() => {});
+      favoriteApi.check('board', currentBoard.id).then(res => setIsFavorite(res.data?.isFavorite || false)).catch(() => {});
+    }
+  }, [currentBoard?.id]);
+
+  const toggleFavorite = async () => {
+    try {
+      if (isFavorite) {
+        await favoriteApi.remove('board', currentBoard.id);
+        setIsFavorite(false);
+        toast.success('Retiré des favoris');
+      } else {
+        await favoriteApi.add('board', currentBoard.id);
+        setIsFavorite(true);
+        toast.success('Ajouté aux favoris');
+      }
+    } catch (error) {
+      toast.error('Erreur');
+    }
+  };
+
+  const handleSaveFilter = async () => {
+    const name = prompt('Nom du filtre :');
+    if (!name) return;
+    try {
+      const { data } = await savedFilterApi.create({
+        boardId: currentBoard.id,
+        name,
+        filters: { searchTerm, status: statusFilter, priority: priorityFilter },
+        isShared: false,
+      });
+      setSavedFilters(prev => [data, ...prev]);
+      toast.success('Filtre sauvegardé');
+    } catch (error) {
+      toast.error('Erreur');
+    }
+  };
+
+  const applySavedFilter = (filter) => {
+    const f = filter.filters || {};
+    setSearchTerm(f.searchTerm || '');
+    setStatusFilter(f.status || '');
+    setPriorityFilter(f.priority || '');
+    setShowSavedFilters(false);
+  };
 
   // Close menus on outside click
   useEffect(() => {
@@ -200,6 +257,11 @@ export default function BoardToolbar() {
 
         {/* Actions */}
         <div className="flex items-center gap-3">
+          {/* Favorite Toggle */}
+          <button onClick={toggleFavorite} className={`p-2 rounded-lg transition-colors ${isFavorite ? 'text-yellow-400 bg-yellow-400/10' : 'text-surface-400 hover:text-yellow-400'}`} title={isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}>
+            <Star className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
+          </button>
+
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
@@ -271,6 +333,41 @@ export default function BoardToolbar() {
                       ))}
                     </select>
                   </div>
+
+                  {/* Save/Load Filters */}
+                  <div className="flex items-center justify-between pt-2 border-t border-surface-700">
+                    <button onClick={handleSaveFilter} disabled={!hasActiveFilters} className="text-xs flex items-center gap-1 text-primary-400 hover:text-primary-300 disabled:opacity-50">
+                      <BookmarkPlus className="w-3.5 h-3.5" /> Sauvegarder
+                    </button>
+                    {savedFilters.length > 0 && (
+                      <button onClick={() => setShowSavedFilters(!showSavedFilters)} className="text-xs text-surface-400 hover:text-surface-200">
+                        Filtres sauvegardés ({savedFilters.length})
+                      </button>
+                    )}
+                  </div>
+                  {showSavedFilters && savedFilters.length > 0 && (
+                    <div className="space-y-1 pt-2">
+                      {savedFilters.map((sf) => (
+                        <button
+                          key={sf.id}
+                          onClick={() => applySavedFilter(sf)}
+                          className="w-full text-left px-2 py-1.5 text-sm text-surface-300 hover:bg-surface-700 rounded flex items-center justify-between"
+                        >
+                          <span>{sf.name}</span>
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              await savedFilterApi.delete(sf.id);
+                              setSavedFilters(prev => prev.filter(f => f.id !== sf.id));
+                            }}
+                            className="p-0.5 text-surface-500 hover:text-red-400"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>

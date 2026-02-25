@@ -243,7 +243,11 @@ export default function BoardKanban() {
           onDrop={(e) => handleDrop(e, status.id)}
         >
           {/* Column Header */}
-          <div className="p-3 border-b border-surface-700/50">
+          <div className={`p-3 border-b ${
+            status.wipLimit && (itemsByStatus[status.id]?.length || 0) > status.wipLimit
+              ? 'border-red-500/50 bg-red-500/5'
+              : 'border-surface-700/50'
+          }`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div
@@ -253,8 +257,13 @@ export default function BoardKanban() {
                 <span className="font-medium text-surface-200 text-sm">
                   {status.name || status.label || 'Sans nom'}
                 </span>
-                <span className="text-sm text-surface-500">
+                <span className={`text-sm ${
+                  status.wipLimit && (itemsByStatus[status.id]?.length || 0) > status.wipLimit
+                    ? 'text-red-400 font-medium'
+                    : 'text-surface-500'
+                }`}>
                   {itemsByStatus[status.id]?.length || 0}
+                  {status.wipLimit ? `/${status.wipLimit}` : ''}
                 </span>
               </div>
             </div>

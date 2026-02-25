@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -8,7 +8,6 @@ import {
   Plus,
   ChevronDown,
   ChevronRight,
-  Sparkles,
   LogOut,
   Users,
   Wallet,
@@ -18,9 +17,13 @@ import {
   Shield,
   Award,
   Ticket,
+  Star,
+  Clock,
+  BarChart3,
 } from 'lucide-react';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useAuthStore } from '../../stores/authStore';
+import { favoriteApi } from '../../lib/api';
 import CreateWorkspaceModal from '../modals/CreateWorkspaceModal';
 
 export default function Sidebar() {
@@ -30,6 +33,11 @@ export default function Sidebar() {
   const { user, logout } = useAuthStore();
   const [expandedWorkspaces, setExpandedWorkspaces] = useState({});
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [favorites, setFavorites] = useState([]);
+
+  useEffect(() => {
+    favoriteApi.getAll().then(res => setFavorites(res.data || [])).catch(() => {});
+  }, []);
 
   const toggleWorkspace = (workspaceId) => {
     setExpandedWorkspaces((prev) => ({
@@ -51,10 +59,13 @@ export default function Sidebar() {
         {/* Logo */}
         <div className="p-6 border-b border-surface-800">
           <Link to="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 rounded-xl bg-primary-600 flex items-center justify-center shadow-lg shadow-primary-600/20">
+              <svg viewBox="0 0 24 24" className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+              </svg>
             </div>
-            <span className="font-display font-bold text-xl gradient-text">
+            <span className="font-semibold text-xl text-surface-100 tracking-tight">
               GesProjet
             </span>
           </Link>
@@ -72,6 +83,33 @@ export default function Sidebar() {
               <span>Tableau de bord</span>
             </Link>
           </div>
+
+          {/* Favorites */}
+          {favorites.length > 0 && (
+            <div className="mb-4">
+              <div className="px-4 mb-2">
+                <span className="text-xs font-semibold text-surface-500 uppercase tracking-wider flex items-center gap-1">
+                  <Star className="w-3 h-3" />
+                  Favoris
+                </span>
+              </div>
+              <div className="space-y-0.5">
+                {favorites.map((fav) => (
+                  <Link
+                    key={fav.id}
+                    to={fav.entity_type === 'board' ? `/board/${fav.entity_id}` : `/workspace/${fav.entity_id}`}
+                    className={`sidebar-item text-sm ${
+                      location.pathname === (fav.entity_type === 'board' ? `/board/${fav.entity_id}` : `/workspace/${fav.entity_id}`)
+                        ? 'active' : ''
+                    }`}
+                  >
+                    <Star className="w-4 h-4 text-yellow-400" />
+                    <span className="truncate">{fav.entity_name || 'Sans nom'}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Workspaces */}
           <div className="px-4 mb-2">
@@ -149,6 +187,28 @@ export default function Sidebar() {
                         <span>Évaluation équipe</span>
                       </Link>
                       <Link
+                        to={`/workspace/${workspace.id}/time-report`}
+                        className={`sidebar-item pl-12 text-sm ${
+                          location.pathname === `/workspace/${workspace.id}/time-report`
+                            ? 'active'
+                            : ''
+                        }`}
+                      >
+                        <Clock className="w-4 h-4" />
+                        <span>Suivi du temps</span>
+                      </Link>
+                      <Link
+                        to={`/workspace/${workspace.id}/dashboard`}
+                        className={`sidebar-item pl-12 text-sm ${
+                          location.pathname === `/workspace/${workspace.id}/dashboard`
+                            ? 'active'
+                            : ''
+                        }`}
+                      >
+                        <LayoutDashboard className="w-4 h-4" />
+                        <span>Dashboard perso</span>
+                      </Link>
+                      <Link
                         to={`/workspace/${workspace.id}/tickets`}
                         className={`sidebar-item pl-12 text-sm ${
                           location.pathname === `/workspace/${workspace.id}/tickets`
@@ -169,6 +229,17 @@ export default function Sidebar() {
                       >
                         <Settings className="w-4 h-4" />
                         <span>Gestion tickets</span>
+                      </Link>
+                      <Link
+                        to={`/workspace/${workspace.id}/reports`}
+                        className={`sidebar-item pl-12 text-sm ${
+                          location.pathname === `/workspace/${workspace.id}/reports`
+                            ? 'active'
+                            : ''
+                        }`}
+                      >
+                        <BarChart3 className="w-4 h-4" />
+                        <span>Rapports</span>
                       </Link>
                       <Link
                         to={`/workspace/${workspace.id}/permissions`}

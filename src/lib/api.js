@@ -362,6 +362,92 @@ export const fileApi = {
   delete: (filename) => api.delete(`/files/${filename}`),
 };
 
+// Time Entries API
+export const timeEntryApi = {
+  getByItem: (itemId) => api.get(`/time-entries/item/${itemId}`),
+  getMy: (params) => api.get('/time-entries/me', { params }),
+  getActive: () => api.get('/time-entries/active'),
+  getReport: (workspaceId, params) => api.get(`/time-entries/workspace/${workspaceId}/report`, { params }),
+  create: (data) => api.post('/time-entries', data),
+  stop: () => api.post('/time-entries/stop'),
+  update: (id, data) => api.put(`/time-entries/${id}`, data),
+  delete: (id) => api.delete(`/time-entries/${id}`),
+};
+
+// Favorites API
+export const favoriteApi = {
+  getAll: () => api.get('/favorites'),
+  add: (entityType, entityId) => api.post('/favorites', { entityType, entityId }),
+  remove: (entityType, entityId) => api.delete(`/favorites/${entityType}/${entityId}`),
+  check: (entityType, entityId) => api.get(`/favorites/check/${entityType}/${entityId}`),
+};
+
+// Dependencies API
+export const dependencyApi = {
+  getByItem: (itemId) => api.get(`/dependencies/item/${itemId}`),
+  getByBoard: (boardId) => api.get(`/dependencies/board/${boardId}`),
+  create: (data) => api.post('/dependencies', data),
+  delete: (id) => api.delete(`/dependencies/${id}`),
+};
+
+// Watchers API (on items)
+export const watcherApi = {
+  getWatchers: (itemId) => api.get(`/items/${itemId}/watchers`),
+  watch: (itemId) => api.post(`/items/${itemId}/watch`),
+  unwatch: (itemId) => api.delete(`/items/${itemId}/watch`),
+  isWatching: (itemId) => api.get(`/items/${itemId}/watching`),
+};
+
+// Sprints API
+export const sprintApi = {
+  getByBoard: (boardId) => api.get(`/sprints/board/${boardId}`),
+  getActive: (boardId) => api.get(`/sprints/board/${boardId}/active`),
+  getBacklog: (boardId) => api.get(`/sprints/board/${boardId}/backlog`),
+  getItems: (sprintId) => api.get(`/sprints/${sprintId}/items`),
+  create: (data) => api.post('/sprints', data),
+  update: (id, data) => api.put(`/sprints/${id}`, data),
+  delete: (id) => api.delete(`/sprints/${id}`),
+  start: (id) => api.post(`/sprints/${id}/start`),
+  complete: (id, data) => api.post(`/sprints/${id}/complete`, data),
+  addItems: (sprintId, itemIds) => api.post(`/sprints/${sprintId}/items`, { itemIds }),
+  removeItem: (sprintId, itemId) => api.delete(`/sprints/${sprintId}/items/${itemId}`),
+  getBurndown: (sprintId) => api.get(`/sprints/${sprintId}/burndown`),
+  getVelocity: (boardId) => api.get(`/sprints/board/${boardId}/velocity`),
+};
+
+// Dashboard API
+export const dashboardApi = {
+  getWidgets: (workspaceId) => api.get(`/dashboard/workspace/${workspaceId}`),
+  getData: (workspaceId) => api.get(`/dashboard/workspace/${workspaceId}/data`),
+  createWidget: (data) => api.post('/dashboard', data),
+  updateWidget: (id, data) => api.put(`/dashboard/${id}`, data),
+  deleteWidget: (id) => api.delete(`/dashboard/${id}`),
+  updatePositions: (widgets) => api.put('/dashboard/batch/positions', { widgets }),
+};
+
+// Reports API
+export const reportApi = {
+  getWorkload: (workspaceId) => api.get(`/reports/workspace/${workspaceId}/workload`),
+  getDeadlines: (workspaceId) => api.get(`/reports/workspace/${workspaceId}/deadlines`),
+  getActivitySummary: (workspaceId, params) => api.get(`/reports/workspace/${workspaceId}/activity-summary`, { params }),
+};
+
+// Templates API
+export const templateApi = {
+  getAll: (workspaceId) => api.get('/templates', { params: { workspaceId } }),
+  create: (data) => api.post('/templates', data),
+  apply: (templateId, data) => api.post(`/templates/${templateId}/apply`, data),
+  delete: (templateId) => api.delete(`/templates/${templateId}`),
+};
+
+// Saved Filters API
+export const savedFilterApi = {
+  getByBoard: (boardId) => api.get(`/saved-filters/board/${boardId}`),
+  create: (data) => api.post('/saved-filters', data),
+  update: (id, data) => api.put(`/saved-filters/${id}`, data),
+  delete: (id) => api.delete(`/saved-filters/${id}`),
+};
+
 // Tickets API (Intervention tickets)
 export const ticketApi = {
   // Categories

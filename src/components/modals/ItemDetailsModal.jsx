@@ -3,11 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, Save, Trash2, MessageSquare, CheckSquare, Activity, Paperclip,
   Clock, User, Calendar, Send, MoreHorizontal, ChevronDown, ChevronRight,
-  Plus, GripVertical, Check, Edit2, Reply
+  Plus, GripVertical, Check, Edit2, Reply, Eye, EyeOff, Link2, Play, Square,
+  Timer
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { itemApi, commentApi, subtaskApi, activityApi } from '../../lib/api';
+import { itemApi, commentApi, subtaskApi, activityApi, timeEntryApi, watcherApi, dependencyApi } from '../../lib/api';
 import { useBoardStore } from '../../stores/boardStore';
 import { useAuthStore } from '../../stores/authStore';
 import toast from 'react-hot-toast';
@@ -34,6 +35,21 @@ export default function ItemDetailsModal({ isOpen, onClose, item }) {
   // Activity state
   const [activities, setActivities] = useState([]);
   const [loadingActivities, setLoadingActivities] = useState(false);
+  
+  // Time tracking state
+  const [timeEntries, setTimeEntries] = useState([]);
+  const [loadingTime, setLoadingTime] = useState(false);
+  const [activeTimer, setActiveTimer] = useState(null);
+  const [timerElapsed, setTimerElapsed] = useState(0);
+  const [timeDescription, setTimeDescription] = useState('');
+  
+  // Watchers state
+  const [isWatching, setIsWatching] = useState(false);
+  const [watcherCount, setWatcherCount] = useState(0);
+  
+  // Dependencies state
+  const [dependencies, setDependencies] = useState({ blocking: [], blockedBy: [] });
+  const [loadingDeps, setLoadingDeps] = useState(false);
 
   useEffect(() => {
     if (item) {
@@ -44,8 +60,21 @@ export default function ItemDetailsModal({ isOpen, onClose, item }) {
       });
       loadComments();
       loadSubtasks();
+      loadWatcherStatus();
     }
   }, [item]);
+  
+  // Timer interval
+  useEffect(() => {
+    let interval;
+    if (activeTimer) {
+      interval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - new Date(activeTimer.start_time).getTime()) / 1000);
+        setTimerElapsed(elapsed);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [activeTimer]);
 
   const loadComments = async () => {
     if (!item) return;
@@ -88,6 +117,106 @@ export default function ItemDetailsModal({ isOpen, onClose, item }) {
     } finally {
       setLoadingActivities(false);
     }
+  };
+  
+  const loadTimeEntries = async () => {
+    if (!item) return;
+    setLoadingTime(true);
+    try {
+      const [entriesRes, activeRes] = await Promise.all([
+        timeEntryApi.getByItem(item.id),
+        timeEntryApi.getActive(),
+      ]);
+      setTimeEntries(entriesRes.data);
+      if (activeRes.data && activeRes.data.item_id === item.id) {
+        setActiveTimer(activeRes.data);
+      }
+    } catch (error) {
+      console.error('Error loading time entries:', error);
+    } finally {
+      setLoadingTime(false);
+    }
+  };
+  
+  const loadWatcherStatus = async () => {
+    if (!item) return;
+    try {
+      const [watchingRes, watchersRes] = await Promise.all([
+        watcherApi.isWatching(item.id),
+        watcherApi.getWatchers(item.id),
+      ]);
+      setIsWatching(watchingRes.data.watching);
+      setWatcherCount(watchersRes.data.length);
+    } catch (error) {
+      console.error('Error loading watcher status:', error);
+    }
+  };
+  
+  const loadDependencies = async () => {
+    if (!item) return;
+    setLoadingDeps(true);
+    try {
+      const { data } = await dependencyApi.getByItem(item.id);
+      setDependencies(data);
+    } catch (error) {
+      console.error('Error loading dependencies:', error);
+    } finally {
+      setLoadingDeps(false);
+    }
+  };
+  
+  const handleToggleWatch = async () => {
+    try {
+      if (isWatching) {
+        await watcherApi.unwatch(item.id);
+        setIsWatching(false);
+        setWatcherCount(prev => prev - 1);
+      } else {
+        await watcherApi.watch(item.id);
+        setIsWatching(true);
+        setWatcherCount(prev => prev + 1);
+      }
+    } catch (error) {
+      toast.error('Erreur');
+    }
+  };
+  
+  const handleStartTimer = async () => {
+    try {
+      const { data } = await timeEntryApi.create({ itemId: item.id, description: timeDescription || null });
+      setActiveTimer(data);
+      setTimerElapsed(0);
+      setTimeDescription('');
+      toast.success('Chronomètre démarré');
+    } catch (error) {
+      toast.error('Erreur');
+    }
+  };
+  
+  const handleStopTimer = async () => {
+    try {
+      const { data } = await timeEntryApi.stop();
+      setActiveTimer(null);
+      setTimerElapsed(0);
+      setTimeEntries(prev => [data, ...prev]);
+      toast.success('Temps enregistré');
+    } catch (error) {
+      toast.error('Erreur');
+    }
+  };
+  
+  const formatDuration = (seconds) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+  
+  const formatMinutes = (minutes) => {
+    if (!minutes) return '0m';
+    const h = Math.floor(minutes / 60);
+    const m = Math.round(minutes % 60);
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
   };
 
   const handleSubmit = async () => {
@@ -204,6 +333,8 @@ export default function ItemDetailsModal({ isOpen, onClose, item }) {
     { id: 'details', label: 'Détails', icon: Edit2 },
     { id: 'subtasks', label: `Checklist (${subtaskProgress.completed}/${subtaskProgress.total})`, icon: CheckSquare },
     { id: 'comments', label: `Commentaires (${comments.length})`, icon: MessageSquare },
+    { id: 'time', label: 'Temps', icon: Timer },
+    { id: 'dependencies', label: 'Dépendances', icon: Link2 },
     { id: 'activity', label: 'Activité', icon: Activity },
   ];
 
@@ -246,9 +377,21 @@ export default function ItemDetailsModal({ isOpen, onClose, item }) {
                 </select>
               )}
             </div>
-            <button onClick={onClose} className="p-2 rounded-lg hover:bg-surface-700 text-surface-400">
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleToggleWatch}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                  isWatching ? 'bg-primary-500/20 text-primary-400' : 'hover:bg-surface-700 text-surface-400'
+                }`}
+                title={isWatching ? 'Ne plus observer' : 'Observer'}
+              >
+                {isWatching ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                {watcherCount > 0 && <span>{watcherCount}</span>}
+              </button>
+              <button onClick={onClose} className="p-2 rounded-lg hover:bg-surface-700 text-surface-400">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           {/* Tabs */}
@@ -259,6 +402,8 @@ export default function ItemDetailsModal({ isOpen, onClose, item }) {
                 onClick={() => {
                   setActiveTab(tab.id);
                   if (tab.id === 'activity') loadActivities();
+                  if (tab.id === 'time') loadTimeEntries();
+                  if (tab.id === 'dependencies') loadDependencies();
                 }}
                 className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === tab.id
@@ -405,6 +550,143 @@ export default function ItemDetailsModal({ isOpen, onClose, item }) {
 
                 {comments.length === 0 && !loadingComments && (
                   <p className="text-center text-surface-500 py-8">Aucun commentaire</p>
+                )}
+              </div>
+            )}
+
+            {/* Time Tracking Tab */}
+            {activeTab === 'time' && (
+              <div className="space-y-4">
+                {/* Timer control */}
+                <div className="bg-surface-800/50 rounded-xl p-4">
+                  {activeTimer ? (
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-3xl font-mono font-bold text-primary-400">{formatDuration(timerElapsed)}</p>
+                        <p className="text-sm text-surface-400 mt-1">Chronomètre en cours...</p>
+                      </div>
+                      <button onClick={handleStopTimer} className="flex items-center gap-2 px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors">
+                        <Square className="w-4 h-4" />
+                        Arrêter
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <input
+                        type="text"
+                        value={timeDescription}
+                        onChange={(e) => setTimeDescription(e.target.value)}
+                        placeholder="Description (optionnel)..."
+                        className="input"
+                      />
+                      <button onClick={handleStartTimer} className="flex items-center gap-2 px-4 py-2 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 transition-colors">
+                        <Play className="w-4 h-4" />
+                        Démarrer le chronomètre
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Time entries list */}
+                <div className="space-y-2">
+                  {timeEntries.map((entry) => (
+                    <div key={entry.id} className="flex items-center justify-between p-3 bg-surface-800/30 rounded-lg group">
+                      <div className="flex-1">
+                        <p className="text-sm text-surface-200">
+                          {entry.first_name} {entry.last_name}
+                        </p>
+                        {entry.description && (
+                          <p className="text-xs text-surface-500 mt-0.5">{entry.description}</p>
+                        )}
+                        <p className="text-xs text-surface-500 mt-0.5">
+                          {format(new Date(entry.start_time), 'dd/MM/yyyy HH:mm', { locale: fr })}
+                        </p>
+                      </div>
+                      <span className="text-sm font-medium text-primary-400">
+                        {formatMinutes(entry.duration_minutes || entry.current_duration)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {timeEntries.length === 0 && !loadingTime && (
+                  <p className="text-center text-surface-500 py-8">Aucune entrée de temps</p>
+                )}
+
+                {timeEntries.length > 0 && (
+                  <div className="bg-surface-800/50 rounded-lg p-3 flex items-center justify-between">
+                    <span className="text-sm text-surface-400">Total</span>
+                    <span className="font-semibold text-surface-200">
+                      {formatMinutes(timeEntries.reduce((sum, e) => sum + (e.duration_minutes || 0), 0))}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Dependencies Tab */}
+            {activeTab === 'dependencies' && (
+              <div className="space-y-4">
+                {loadingDeps ? (
+                  <div className="flex justify-center py-8">
+                    <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+                  </div>
+                ) : (
+                  <>
+                    {dependencies.blocking.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium text-surface-400 mb-2">Bloque</h4>
+                        {dependencies.blocking.map((dep) => (
+                          <div key={dep.id} className="flex items-center justify-between p-3 bg-surface-800/30 rounded-lg mb-2 group">
+                            <div className="flex items-center gap-2">
+                              <Link2 className="w-4 h-4 text-orange-400" />
+                              <span className="text-sm text-surface-200">{dep.item_name}</span>
+                              <span className="text-xs text-surface-500">({dep.board_name})</span>
+                            </div>
+                            <button
+                              onClick={async () => {
+                                await dependencyApi.delete(dep.id);
+                                loadDependencies();
+                                toast.success('Dépendance supprimée');
+                              }}
+                              className="opacity-0 group-hover:opacity-100 p-1 text-surface-500 hover:text-red-400"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {dependencies.blockedBy.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium text-surface-400 mb-2">Bloqué par</h4>
+                        {dependencies.blockedBy.map((dep) => (
+                          <div key={dep.id} className="flex items-center justify-between p-3 bg-surface-800/30 rounded-lg mb-2 group">
+                            <div className="flex items-center gap-2">
+                              <Link2 className="w-4 h-4 text-red-400" />
+                              <span className="text-sm text-surface-200">{dep.item_name}</span>
+                              <span className="text-xs text-surface-500">({dep.board_name})</span>
+                            </div>
+                            <button
+                              onClick={async () => {
+                                await dependencyApi.delete(dep.id);
+                                loadDependencies();
+                                toast.success('Dépendance supprimée');
+                              }}
+                              className="opacity-0 group-hover:opacity-100 p-1 text-surface-500 hover:text-red-400"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {dependencies.blocking.length === 0 && dependencies.blockedBy.length === 0 && (
+                      <p className="text-center text-surface-500 py-8">Aucune dépendance</p>
+                    )}
+                  </>
                 )}
               </div>
             )}

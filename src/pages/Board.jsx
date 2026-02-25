@@ -11,6 +11,7 @@ import BoardKanban from "../components/board/BoardKanban";
 import BoardCalendar from "../components/board/BoardCalendar";
 import BoardCharts from "../components/board/BoardCharts";
 import BoardTimeline from "../components/board/BoardTimeline";
+import BoardSprint from "../components/board/BoardSprint";
 
 export default function Board() {
   const { boardId } = useParams();
@@ -57,6 +58,7 @@ export default function Board() {
         {activeView === "calendar" && <BoardCalendar />}
         {activeView === "timeline" && <BoardTimeline />}
         {activeView === "chart" && <BoardCharts />}
+        {activeView === "sprint" && <BoardSprint />}
       </div>
     </motion.div>
   );

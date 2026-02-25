@@ -13,6 +13,9 @@ import Members from './pages/Members';
 import Budgets from './pages/Budgets';
 import BudgetDetails from './pages/BudgetDetails';
 import TeamEvaluation from './pages/TeamEvaluation';
+import TimeReport from './pages/TimeReport';
+import CustomDashboard from './pages/CustomDashboard';
+import Reports from './pages/Reports';
 
 // Tickets
 import SubmitTicket from './pages/tickets/SubmitTicket';
@@ -115,6 +118,9 @@ export default function App() {
         <Route path="workspace/:workspaceId/budgets" element={<Budgets />} />
         <Route path="workspace/:workspaceId/budget/:budgetId" element={<BudgetDetails />} />
         <Route path="workspace/:workspaceId/evaluation" element={<TeamEvaluation />} />
+        <Route path="workspace/:workspaceId/time-report" element={<TimeReport />} />
+        <Route path="workspace/:workspaceId/dashboard" element={<CustomDashboard />} />
+        <Route path="workspace/:workspaceId/reports" element={<Reports />} />
         
         {/* Tickets */}
         <Route path="workspace/:workspaceId/tickets" element={<SubmitTicket />} />

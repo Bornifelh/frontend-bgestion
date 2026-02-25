@@ -1,11 +1,19 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { BarChart3, PieChart, TrendingUp, Activity } from 'lucide-react';
+import { BarChart3, PieChart, TrendingUp, Activity, Zap } from 'lucide-react';
 import { useBoardStore } from '../../stores/boardStore';
+import { sprintApi } from '../../lib/api';
 
 export default function BoardCharts() {
-  const { columns = [], items = [], groups = [] } = useBoardStore();
+  const { currentBoard, columns = [], items = [], groups = [] } = useBoardStore();
   const [activeChart, setActiveChart] = useState('status');
+  const [velocityData, setVelocityData] = useState([]);
+
+  useEffect(() => {
+    if (currentBoard?.id) {
+      sprintApi.getVelocity(currentBoard.id).then(res => setVelocityData(res.data || [])).catch(() => {});
+    }
+  }, [currentBoard?.id]);
 
   // Find status and other columns
   const statusColumn = useMemo(() => {
@@ -329,6 +337,38 @@ export default function BoardCharts() {
                       <p className="font-bold text-surface-200">{avg.toFixed(1)}</p>
                     </div>
                   </div>
+                </div>
+              );
+            })}
+          </div>
+        </motion.div>
+      )}
+      {/* Velocity Chart (Sprint data) */}
+      {velocityData.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="card p-6"
+        >
+          <h3 className="text-lg font-semibold text-surface-100 mb-4 flex items-center gap-2">
+            <Zap className="w-5 h-5 text-yellow-400" />
+            Vélocité des sprints
+          </h3>
+          <div className="flex items-end gap-4 h-48">
+            {velocityData.map((sprint, i) => {
+              const maxItems = Math.max(...velocityData.map(s => s.total_items || 1));
+              const height = ((sprint.completed_items || 0) / maxItems) * 100;
+              return (
+                <div key={sprint.id} className="flex-1 flex flex-col items-center gap-2">
+                  <span className="text-sm font-medium text-surface-200">{sprint.completed_items || 0}</span>
+                  <motion.div
+                    initial={{ height: 0 }}
+                    animate={{ height: `${Math.max(height, 5)}%` }}
+                    transition={{ delay: i * 0.1 }}
+                    className="w-full rounded-t-lg bg-gradient-to-t from-primary-600 to-primary-400"
+                  />
+                  <span className="text-xs text-surface-500 truncate max-w-full text-center">{sprint.name}</span>
                 </div>
               );
             })}
