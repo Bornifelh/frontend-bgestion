@@ -10,6 +10,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { useBoardStore } from '../../stores/boardStore';
+import { dependencyApi } from '../../lib/api';
 
 const ZOOM_LEVELS = {
   day: { label: 'Jour', days: 1, width: 120 },
@@ -19,7 +20,7 @@ const ZOOM_LEVELS = {
 };
 
 export default function BoardTimeline() {
-  const { items, columns, groups } = useBoardStore();
+  const { currentBoard, items, columns, groups } = useBoardStore();
   const [zoomLevel, setZoomLevel] = useState('week');
   const [startDate, setStartDate] = useState(() => {
     const date = new Date();
@@ -28,6 +29,7 @@ export default function BoardTimeline() {
   });
   const containerRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(0);
+  const [boardDependencies, setBoardDependencies] = useState([]);
 
   useEffect(() => {
     const updateWidth = () => {
@@ -39,6 +41,14 @@ export default function BoardTimeline() {
     window.addEventListener('resize', updateWidth);
     return () => window.removeEventListener('resize', updateWidth);
   }, []);
+
+  useEffect(() => {
+    if (currentBoard?.id) {
+      dependencyApi.getByBoard(currentBoard.id)
+        .then(res => setBoardDependencies(res.data || []))
+        .catch(() => {});
+    }
+  }, [currentBoard?.id]);
 
   // Find date columns
   const dateColumns = useMemo(() => {
@@ -368,8 +378,97 @@ export default function BoardTimeline() {
               <p className="text-sm">Aucun item avec des dates à afficher</p>
             </div>
           )}
+
+          {/* Dependency Arrows SVG Overlay */}
+          {boardDependencies.length > 0 && timelineItems.length > 0 && (
+            <DependencyArrows
+              dependencies={boardDependencies}
+              timelineItems={timelineItems}
+              startDate={startDate}
+              endOfRange={endOfRange}
+              groupedItems={groupedItems}
+            />
+          )}
         </div>
       </div>
     </div>
+  );
+}
+
+function DependencyArrows({ dependencies, timelineItems, startDate, endOfRange, groupedItems }) {
+  const itemPositions = useMemo(() => {
+    const positions = {};
+    let rowIndex = 0;
+    const ROW_HEIGHT = 48;
+    const HEADER_HEIGHT = 40;
+    const NAME_COL_WIDTH = 192;
+    
+    groupedItems.forEach(([, group]) => {
+      rowIndex++;
+      group.items.forEach((item) => {
+        const rangeStart = startDate.getTime();
+        const rangeEnd = endOfRange.getTime();
+        const totalMs = rangeEnd - rangeStart;
+        
+        const itemEndMs = Math.min(item.end.getTime(), rangeEnd);
+        const itemStartMs = Math.max(item.start.getTime(), rangeStart);
+        
+        if (itemEndMs >= rangeStart && itemStartMs <= rangeEnd) {
+          const rightPct = ((itemEndMs - rangeStart) / totalMs) * 100;
+          const leftPct = ((itemStartMs - rangeStart) / totalMs) * 100;
+          
+          positions[item.id] = {
+            y: HEADER_HEIGHT + rowIndex * ROW_HEIGHT + ROW_HEIGHT / 2,
+            rightPct,
+            leftPct,
+          };
+        }
+        rowIndex++;
+      });
+    });
+    return positions;
+  }, [groupedItems, startDate, endOfRange]);
+
+  const arrows = useMemo(() => {
+    return dependencies
+      .filter(dep => itemPositions[dep.item_id] && itemPositions[dep.depends_on_id])
+      .map(dep => ({
+        id: dep.id,
+        from: itemPositions[dep.depends_on_id],
+        to: itemPositions[dep.item_id],
+      }));
+  }, [dependencies, itemPositions]);
+
+  if (arrows.length === 0) return null;
+
+  return (
+    <svg
+      className="absolute inset-0 pointer-events-none"
+      style={{ left: 192, width: 'calc(100% - 192px)', height: '100%' }}
+    >
+      <defs>
+        <marker id="dep-arrow" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#f59e0b" />
+        </marker>
+      </defs>
+      {arrows.map((arrow) => {
+        const fromX = `${arrow.from.rightPct}%`;
+        const toX = `${arrow.to.leftPct}%`;
+        return (
+          <line
+            key={arrow.id}
+            x1={fromX}
+            y1={arrow.from.y}
+            x2={toX}
+            y2={arrow.to.y}
+            stroke="#f59e0b"
+            strokeWidth="2"
+            strokeDasharray={arrow.from.y === arrow.to.y ? "0" : "6 3"}
+            opacity="0.6"
+            markerEnd="url(#dep-arrow)"
+          />
+        );
+      })}
+    </svg>
   );
 }

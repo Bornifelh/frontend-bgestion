@@ -4,11 +4,11 @@ import {
   X, Save, Trash2, MessageSquare, CheckSquare, Activity, Paperclip,
   Clock, User, Calendar, Send, MoreHorizontal, ChevronDown, ChevronRight,
   Plus, GripVertical, Check, Edit2, Reply, Eye, EyeOff, Link2, Play, Square,
-  Timer
+  Timer, Search, ArrowRightLeft, AtSign
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { itemApi, commentApi, subtaskApi, activityApi, timeEntryApi, watcherApi, dependencyApi } from '../../lib/api';
+import { itemApi, commentApi, subtaskApi, activityApi, timeEntryApi, watcherApi, dependencyApi, searchApi, memberApi } from '../../lib/api';
 import { useBoardStore } from '../../stores/boardStore';
 import { useAuthStore } from '../../stores/authStore';
 import toast from 'react-hot-toast';
@@ -48,8 +48,18 @@ export default function ItemDetailsModal({ isOpen, onClose, item }) {
   const [watcherCount, setWatcherCount] = useState(0);
   
   // Dependencies state
-  const [dependencies, setDependencies] = useState({ blocking: [], blockedBy: [] });
+  const [dependencies, setDependencies] = useState({ blocking: [], blockedBy: [], related: [] });
   const [loadingDeps, setLoadingDeps] = useState(false);
+  const [depSearchTerm, setDepSearchTerm] = useState('');
+  const [depSearchResults, setDepSearchResults] = useState([]);
+  const [depType, setDepType] = useState('finish_to_start');
+  const [searchingDeps, setSearchingDeps] = useState(false);
+  
+  // @Mentions state
+  const [mentionSearch, setMentionSearch] = useState('');
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionResults, setMentionResults] = useState([]);
+  const [workspaceMembers, setWorkspaceMembers] = useState([]);
 
   useEffect(() => {
     if (item) {
@@ -61,6 +71,7 @@ export default function ItemDetailsModal({ isOpen, onClose, item }) {
       loadComments();
       loadSubtasks();
       loadWatcherStatus();
+      loadWorkspaceMembers();
     }
   }, [item]);
   
@@ -165,6 +176,81 @@ export default function ItemDetailsModal({ isOpen, onClose, item }) {
     }
   };
   
+  const loadWorkspaceMembers = async () => {
+    try {
+      const board = useBoardStore.getState().currentBoard;
+      if (board?.workspaceId) {
+        const { data } = await memberApi.getByWorkspace(board.workspaceId);
+        setWorkspaceMembers(data || []);
+      }
+    } catch (error) {
+      console.error('Error loading members:', error);
+    }
+  };
+  
+  const handleSearchDependency = async (term) => {
+    setDepSearchTerm(term);
+    if (term.length < 2) {
+      setDepSearchResults([]);
+      return;
+    }
+    setSearchingDeps(true);
+    try {
+      const { data } = await searchApi.quick({ q: term, type: 'items' });
+      setDepSearchResults((data || []).filter(r => r.id !== item.id).slice(0, 8));
+    } catch (error) {
+      console.error('Error searching:', error);
+    } finally {
+      setSearchingDeps(false);
+    }
+  };
+  
+  const handleCreateDependency = async (targetItemId) => {
+    try {
+      await dependencyApi.create({
+        itemId: item.id,
+        dependsOnId: targetItemId,
+        dependencyType: depType,
+      });
+      setDepSearchTerm('');
+      setDepSearchResults([]);
+      loadDependencies();
+      toast.success('Dépendance créée');
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Erreur lors de la création');
+    }
+  };
+  
+  const handleCommentInput = (e) => {
+    const value = e.target.value;
+    setNewComment(value);
+    
+    const cursorPos = e.target.selectionStart;
+    const textBeforeCursor = value.substring(0, cursorPos);
+    const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
+    
+    if (mentionMatch) {
+      const search = mentionMatch[1].toLowerCase();
+      setMentionSearch(search);
+      const filtered = workspaceMembers.filter(m => {
+        const name = `${m.firstName || ''} ${m.lastName || ''}`.toLowerCase();
+        return name.includes(search);
+      }).slice(0, 5);
+      setMentionResults(filtered);
+      setShowMentions(filtered.length > 0);
+    } else {
+      setShowMentions(false);
+    }
+  };
+  
+  const insertMention = (member) => {
+    const name = `${member.firstName} ${member.lastName}`;
+    const mentionRegex = /@\w*$/;
+    const newValue = newComment.replace(mentionRegex, `@${name} `);
+    setNewComment(newValue);
+    setShowMentions(false);
+  };
+
   const handleToggleWatch = async () => {
     try {
       if (isWatching) {
@@ -522,14 +608,32 @@ export default function ItemDetailsModal({ isOpen, onClose, item }) {
                         </button>
                       </div>
                     )}
-                    <div className="flex gap-2">
-                      <textarea
-                        value={newComment}
-                        onChange={(e) => setNewComment(e.target.value)}
-                        placeholder="Ajouter un commentaire..."
-                        className="input flex-1 resize-none"
-                        rows={2}
-                      />
+                    <div className="relative flex gap-2">
+                      <div className="flex-1 relative">
+                        <textarea
+                          value={newComment}
+                          onChange={handleCommentInput}
+                          placeholder="Ajouter un commentaire... (utilisez @ pour mentionner)"
+                          className="input w-full resize-none"
+                          rows={2}
+                        />
+                        {showMentions && (
+                          <div className="absolute bottom-full mb-1 left-0 w-full bg-surface-800 border border-surface-700 rounded-lg shadow-xl z-20 max-h-40 overflow-y-auto">
+                            {mentionResults.map((m) => (
+                              <button
+                                key={m.id}
+                                onClick={() => insertMention(m)}
+                                className="w-full text-left px-3 py-2 hover:bg-surface-700 transition-colors flex items-center gap-2 text-sm"
+                              >
+                                <div className="w-6 h-6 rounded-full bg-primary-500/20 flex items-center justify-center text-primary-400 text-xs font-semibold">
+                                  {m.firstName?.[0]}{m.lastName?.[0]}
+                                </div>
+                                <span className="text-surface-200">{m.firstName} {m.lastName}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                       <button onClick={handleAddComment} disabled={!newComment.trim()} className="btn-primary self-end">
                         <Send className="w-4 h-4" />
                       </button>
@@ -627,13 +731,62 @@ export default function ItemDetailsModal({ isOpen, onClose, item }) {
             {/* Dependencies Tab */}
             {activeTab === 'dependencies' && (
               <div className="space-y-4">
+                {/* Add dependency form */}
+                <div className="bg-surface-800/50 rounded-xl p-4 space-y-3">
+                  <h4 className="text-sm font-medium text-surface-200 flex items-center gap-2">
+                    <Plus className="w-4 h-4" /> Ajouter une dépendance
+                  </h4>
+                  <div className="flex gap-2">
+                    <select
+                      value={depType}
+                      onChange={(e) => setDepType(e.target.value)}
+                      className="input w-auto text-sm"
+                    >
+                      <option value="finish_to_start">est bloqué par</option>
+                      <option value="blocks">bloque</option>
+                      <option value="related_to">est lié à</option>
+                      <option value="duplicates">duplique</option>
+                      <option value="is_duplicated_by">est dupliqué par</option>
+                      <option value="causes">cause</option>
+                      <option value="is_caused_by">est causé par</option>
+                    </select>
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
+                      <input
+                        type="text"
+                        value={depSearchTerm}
+                        onChange={(e) => handleSearchDependency(e.target.value)}
+                        placeholder="Rechercher un item..."
+                        className="input pl-9 w-full text-sm"
+                      />
+                      {depSearchResults.length > 0 && (
+                        <div className="absolute z-20 w-full mt-1 bg-surface-800 border border-surface-700 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+                          {depSearchResults.map((result) => (
+                            <button
+                              key={result.id}
+                              onClick={() => handleCreateDependency(result.id)}
+                              className="w-full text-left px-3 py-2 hover:bg-surface-700 transition-colors flex items-center gap-2"
+                            >
+                              <Link2 className="w-3.5 h-3.5 text-surface-500" />
+                              <span className="text-sm text-surface-200 truncate">{result.name}</span>
+                              {result.board_name && (
+                                <span className="text-xs text-surface-500 ml-auto flex-shrink-0">({result.board_name})</span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 {loadingDeps ? (
                   <div className="flex justify-center py-8">
                     <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
                   </div>
                 ) : (
                   <>
-                    {dependencies.blocking.length > 0 && (
+                    {dependencies.blocking?.length > 0 && (
                       <div>
                         <h4 className="text-sm font-medium text-surface-400 mb-2">Bloque</h4>
                         {dependencies.blocking.map((dep) => (
@@ -658,7 +811,7 @@ export default function ItemDetailsModal({ isOpen, onClose, item }) {
                       </div>
                     )}
 
-                    {dependencies.blockedBy.length > 0 && (
+                    {dependencies.blockedBy?.length > 0 && (
                       <div>
                         <h4 className="text-sm font-medium text-surface-400 mb-2">Bloqué par</h4>
                         {dependencies.blockedBy.map((dep) => (
@@ -683,8 +836,41 @@ export default function ItemDetailsModal({ isOpen, onClose, item }) {
                       </div>
                     )}
 
-                    {dependencies.blocking.length === 0 && dependencies.blockedBy.length === 0 && (
-                      <p className="text-center text-surface-500 py-8">Aucune dépendance</p>
+                    {/* Other dependency types (related, duplicates, causes, etc.) */}
+                    {Object.entries(dependencies)
+                      .filter(([key]) => !['blocking', 'blockedBy'].includes(key))
+                      .filter(([, deps]) => Array.isArray(deps) && deps.length > 0)
+                      .map(([type, deps]) => (
+                        <div key={type}>
+                          <h4 className="text-sm font-medium text-surface-400 mb-2">{getDepTypeLabel(type)}</h4>
+                          {deps.map((dep) => (
+                            <div key={dep.id} className="flex items-center justify-between p-3 bg-surface-800/30 rounded-lg mb-2 group">
+                              <div className="flex items-center gap-2">
+                                <ArrowRightLeft className="w-4 h-4 text-blue-400" />
+                                <span className="text-sm text-surface-200">{dep.item_name}</span>
+                                <span className="text-xs text-surface-500">({dep.board_name})</span>
+                                {dep.dependency_type && (
+                                  <span className="text-xs text-surface-600 italic">{dep.dependency_type}</span>
+                                )}
+                              </div>
+                              <button
+                                onClick={async () => {
+                                  await dependencyApi.delete(dep.id);
+                                  loadDependencies();
+                                  toast.success('Dépendance supprimée');
+                                }}
+                                className="opacity-0 group-hover:opacity-100 p-1 text-surface-500 hover:text-red-400"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+
+                    {(dependencies.blocking?.length || 0) === 0 && (dependencies.blockedBy?.length || 0) === 0 && 
+                     Object.entries(dependencies).filter(([key]) => !['blocking', 'blockedBy'].includes(key)).every(([, deps]) => !Array.isArray(deps) || deps.length === 0) && (
+                      <p className="text-center text-surface-500 py-4">Aucune dépendance</p>
                     )}
                   </>
                 )}
@@ -935,6 +1121,18 @@ function renderColumnInput(column, formData, setFormData) {
         />
       );
   }
+}
+
+function getDepTypeLabel(type) {
+  const labels = {
+    related: 'Lié à',
+    duplicates: 'Duplique',
+    is_duplicated_by: 'Est dupliqué par',
+    causes: 'Cause',
+    is_caused_by: 'Est causé par',
+    related_to: 'Lié à',
+  };
+  return labels[type] || type;
 }
 
 function getActivityText(action) {

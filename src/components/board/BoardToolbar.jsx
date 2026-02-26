@@ -20,11 +20,13 @@ import {
   Save,
   Star,
   BookmarkPlus,
+  GitBranch,
 } from 'lucide-react';
 import { useBoardStore } from '../../stores/boardStore';
-import { itemApi, exportApi, savedFilterApi, favoriteApi } from '../../lib/api';
+import { itemApi, exportApi, savedFilterApi, favoriteApi, templateApi } from '../../lib/api';
 import CreateColumnModal from '../modals/CreateColumnModal';
 import AutomationsModal from '../modals/AutomationsModal';
+import WorkflowConfigModal from '../modals/WorkflowConfigModal';
 import toast from 'react-hot-toast';
 
 const viewOptions = [
@@ -51,6 +53,7 @@ export default function BoardToolbar() {
   const [showColumnModal, setShowColumnModal] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showAutomations, setShowAutomations] = useState(false);
+  const [showWorkflow, setShowWorkflow] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -373,6 +376,31 @@ export default function BoardToolbar() {
             </AnimatePresence>
           </div>
 
+          {/* Save as template */}
+          <button
+            onClick={async () => {
+              const name = prompt('Nom du template :');
+              if (!name) return;
+              try {
+                await templateApi.create({ boardId: currentBoard.id, name, description: `Template de ${currentBoard.name}` });
+                toast.success('Template sauvegardé');
+              } catch (error) {
+                toast.error('Erreur lors de la sauvegarde');
+              }
+            }}
+            className="btn btn-ghost"
+            title="Sauvegarder comme template"
+          >
+            <Save className="w-4 h-4" />
+            <span className="hidden sm:inline">Template</span>
+          </button>
+
+          {/* Workflow */}
+          <button onClick={() => setShowWorkflow(true)} className="btn btn-ghost" title="Workflow">
+            <GitBranch className="w-4 h-4" />
+            <span className="hidden sm:inline">Workflow</span>
+          </button>
+
           {/* Automations */}
           <button onClick={() => setShowAutomations(true)} className="btn btn-ghost">
             <Zap className="w-4 h-4" />
@@ -488,6 +516,11 @@ export default function BoardToolbar() {
           />
         )}
       </AnimatePresence>
+
+      <WorkflowConfigModal
+        isOpen={showWorkflow}
+        onClose={() => setShowWorkflow(false)}
+      />
     </>
   );
 }

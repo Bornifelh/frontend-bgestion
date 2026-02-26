@@ -1,19 +1,42 @@
 import { useMemo, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { BarChart3, PieChart, TrendingUp, Activity, Zap } from 'lucide-react';
+import { BarChart3, PieChart, TrendingUp, Activity, Zap, Flame, Layers } from 'lucide-react';
 import { useBoardStore } from '../../stores/boardStore';
 import { sprintApi } from '../../lib/api';
+import { format, subDays, eachDayOfInterval, differenceInDays } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 export default function BoardCharts() {
   const { currentBoard, columns = [], items = [], groups = [] } = useBoardStore();
   const [activeChart, setActiveChart] = useState('status');
   const [velocityData, setVelocityData] = useState([]);
+  const [burndownData, setBurndownData] = useState(null);
+  const [activeSprints, setActiveSprints] = useState([]);
+  const [selectedSprintId, setSelectedSprintId] = useState(null);
 
   useEffect(() => {
     if (currentBoard?.id) {
       sprintApi.getVelocity(currentBoard.id).then(res => setVelocityData(res.data || [])).catch(() => {});
+      sprintApi.getByBoard(currentBoard.id).then(res => {
+        const sprints = res.data || [];
+        setActiveSprints(sprints);
+        const active = sprints.find(s => s.status === 'active');
+        if (active) {
+          setSelectedSprintId(active.id);
+          loadBurndown(active.id);
+        }
+      }).catch(() => {});
     }
   }, [currentBoard?.id]);
+
+  const loadBurndown = async (sprintId) => {
+    try {
+      const { data } = await sprintApi.getBurndown(sprintId);
+      setBurndownData(data);
+    } catch (error) {
+      console.error('Error loading burndown:', error);
+    }
+  };
 
   // Find status and other columns
   const statusColumn = useMemo(() => {
@@ -82,9 +105,23 @@ export default function BoardCharts() {
     return Math.max(...statusDistribution.map(s => s.count), 1);
   }, [statusDistribution]);
 
+  // Cumulative Flow data
+  const cumulativeFlowData = useMemo(() => {
+    if (!statusColumn?.labels || !Array.isArray(statusColumn.labels) || items.length === 0) return [];
+    return statusColumn.labels
+      .filter(l => l != null)
+      .map(label => ({
+        label: label.name || label.label || 'Statut',
+        color: label.color || '#6b7280',
+        count: items.filter(item => item?.values?.[statusColumn.id] === label.id).length,
+      }));
+  }, [statusColumn, items]);
+
   const chartOptions = [
     { id: 'status', label: 'Par statut', icon: PieChart },
     { id: 'groups', label: 'Par groupe', icon: BarChart3 },
+    { id: 'burndown', label: 'Burndown', icon: Flame },
+    { id: 'cfd', label: 'Flux cumulé', icon: Layers },
   ];
 
   return (
@@ -309,6 +346,164 @@ export default function BoardCharts() {
           </div>
         </motion.div>
       </div>
+
+      {/* Burndown Chart */}
+      {activeChart === 'burndown' && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card p-6 col-span-2">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-surface-100 flex items-center gap-2">
+              <Flame className="w-5 h-5 text-orange-400" />
+              Burndown Chart
+            </h3>
+            {activeSprints.length > 0 && (
+              <select
+                value={selectedSprintId || ''}
+                onChange={(e) => {
+                  setSelectedSprintId(e.target.value);
+                  loadBurndown(e.target.value);
+                }}
+                className="input w-auto text-sm"
+              >
+                {activeSprints.map(s => (
+                  <option key={s.id} value={s.id}>{s.name} ({s.status})</option>
+                ))}
+              </select>
+            )}
+          </div>
+          
+          {burndownData?.days?.length > 0 ? (
+            <div className="relative h-64">
+              <svg viewBox="0 0 800 250" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
+                {/* Grid lines */}
+                {[0, 25, 50, 75, 100].map(pct => (
+                  <line key={pct} x1="60" y1={20 + (200 * (100 - pct) / 100)} x2="780" y2={20 + (200 * (100 - pct) / 100)} stroke="#333" strokeWidth="0.5" />
+                ))}
+                
+                {/* Ideal line */}
+                <line x1="60" y1="20" x2="780" y2="220" stroke="#4b5563" strokeWidth="1.5" strokeDasharray="8 4" />
+                
+                {/* Actual burndown line */}
+                {burndownData.days.length > 1 && (
+                  <polyline
+                    fill="none"
+                    stroke="#6366f1"
+                    strokeWidth="2.5"
+                    points={burndownData.days.map((day, i) => {
+                      const x = 60 + (i / (burndownData.days.length - 1)) * 720;
+                      const maxItems = burndownData.total_items || 1;
+                      const y = 20 + ((1 - (day.remaining / maxItems)) * 200);
+                      return `${x},${y}`;
+                    }).join(' ')}
+                  />
+                )}
+                
+                {/* Dots */}
+                {burndownData.days.map((day, i) => {
+                  const x = 60 + (i / Math.max(burndownData.days.length - 1, 1)) * 720;
+                  const maxItems = burndownData.total_items || 1;
+                  const y = 20 + ((1 - (day.remaining / maxItems)) * 200);
+                  return <circle key={i} cx={x} cy={y} r="4" fill="#6366f1" />;
+                })}
+                
+                {/* Axis labels */}
+                <text x="30" y="25" fill="#9ca3af" fontSize="10" textAnchor="middle">{burndownData.total_items || 0}</text>
+                <text x="30" y="225" fill="#9ca3af" fontSize="10" textAnchor="middle">0</text>
+                
+                {/* X axis labels */}
+                {burndownData.days.filter((_, i) => i % Math.max(1, Math.floor(burndownData.days.length / 6)) === 0).map((day, i, filtered) => {
+                  const origIdx = burndownData.days.indexOf(day);
+                  const x = 60 + (origIdx / Math.max(burndownData.days.length - 1, 1)) * 720;
+                  return <text key={i} x={x} y="245" fill="#9ca3af" fontSize="9" textAnchor="middle">{day.date?.substring(5) || ''}</text>;
+                })}
+              </svg>
+              
+              <div className="flex items-center justify-center gap-6 mt-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-0.5 bg-primary-500" />
+                  <span className="text-xs text-surface-400">Réel</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-0.5 border-t-2 border-dashed border-surface-500" />
+                  <span className="text-xs text-surface-400">Idéal</span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-48 text-surface-400">
+              <Flame className="w-8 h-8 mb-2 text-surface-600" />
+              <p className="text-sm">{activeSprints.length === 0 ? 'Créez un sprint pour voir le burndown' : 'Aucune donnée de burndown'}</p>
+            </div>
+          )}
+        </motion.div>
+      )}
+
+      {/* Cumulative Flow Diagram */}
+      {activeChart === 'cfd' && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card p-6 col-span-2">
+          <h3 className="text-lg font-semibold text-surface-100 mb-6 flex items-center gap-2">
+            <Layers className="w-5 h-5 text-cyan-400" />
+            Diagramme de flux cumulé
+          </h3>
+
+          {cumulativeFlowData.length > 0 && items.length > 0 ? (
+            <div>
+              {/* Stacked bar representation */}
+              <div className="flex h-48 items-end gap-0.5 rounded-lg overflow-hidden">
+                {cumulativeFlowData.map((status, i) => {
+                  const height = items.length > 0 ? (status.count / items.length) * 100 : 0;
+                  return (
+                    <motion.div
+                      key={i}
+                      initial={{ height: 0 }}
+                      animate={{ height: `${Math.max(height, 2)}%` }}
+                      transition={{ delay: i * 0.1, duration: 0.5 }}
+                      className="flex-1 flex items-end justify-center rounded-t-md relative group"
+                      style={{ backgroundColor: status.color }}
+                    >
+                      <span className="text-white text-xs font-bold mb-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {status.count}
+                      </span>
+                    </motion.div>
+                  );
+                })}
+              </div>
+
+              {/* Legend */}
+              <div className="mt-4 flex flex-wrap gap-4 justify-center">
+                {cumulativeFlowData.map((status, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: status.color }} />
+                    <span className="text-sm text-surface-400">{status.label}: {status.count}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Stats */}
+              <div className="grid grid-cols-3 gap-4 mt-6">
+                <div className="text-center p-3 bg-surface-800/50 rounded-lg">
+                  <p className="text-2xl font-bold text-surface-100">{items.length}</p>
+                  <p className="text-xs text-surface-500">Total items</p>
+                </div>
+                <div className="text-center p-3 bg-surface-800/50 rounded-lg">
+                  <p className="text-2xl font-bold text-surface-100">{cumulativeFlowData.length}</p>
+                  <p className="text-xs text-surface-500">Statuts</p>
+                </div>
+                <div className="text-center p-3 bg-surface-800/50 rounded-lg">
+                  <p className="text-2xl font-bold text-surface-100">
+                    {cumulativeFlowData.length > 0 ? Math.round((cumulativeFlowData[cumulativeFlowData.length - 1]?.count || 0) / items.length * 100) : 0}%
+                  </p>
+                  <p className="text-xs text-surface-500">Dernier statut</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-48 text-surface-400">
+              <Layers className="w-8 h-8 mb-2 text-surface-600" />
+              <p className="text-sm">Ajoutez une colonne Statut pour voir le flux cumulé</p>
+            </div>
+          )}
+        </motion.div>
+      )}
 
       {/* Number columns summary */}
       {numberColumns.length > 0 && (

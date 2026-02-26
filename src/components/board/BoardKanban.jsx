@@ -1,8 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, MoreHorizontal, Trash2, Edit2, GripVertical, User, Calendar, CheckCircle2 } from 'lucide-react';
+import { Plus, MoreHorizontal, Trash2, Edit2, GripVertical, User, Calendar, CheckCircle2, Settings2 } from 'lucide-react';
 import { useBoardStore } from '../../stores/boardStore';
-import { itemApi, memberApi } from '../../lib/api';
+import { itemApi, memberApi, columnApi } from '../../lib/api';
 import { format, isValid } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import toast from 'react-hot-toast';
@@ -16,6 +16,8 @@ export default function BoardKanban() {
   const [draggedItem, setDraggedItem] = useState(null);
   const [workspaceMembers, setWorkspaceMembers] = useState([]);
   const [editingItem, setEditingItem] = useState(null);
+  const [wipLimits, setWipLimits] = useState({});
+  const [editingWip, setEditingWip] = useState(null);
 
   // Load workspace members for displaying names
   useEffect(() => {
@@ -141,13 +143,41 @@ export default function BoardKanban() {
     if (statusColumn?.labels?.length > 0) {
       return statusColumn.labels;
     }
-    // Default labels if no status column
     return [
       { id: 'todo', name: 'À faire', color: '#6b7280' },
       { id: 'in_progress', name: 'En cours', color: '#3b82f6' },
       { id: 'done', name: 'Terminé', color: '#10b981' },
     ];
   }, [statusColumn]);
+
+  // Initialize WIP limits from column config
+  useEffect(() => {
+    if (statusColumn?.config?.wipLimits) {
+      setWipLimits(statusColumn.config.wipLimits);
+    }
+  }, [statusColumn]);
+
+  const handleSetWipLimit = async (statusId, limit) => {
+    const newLimits = { ...wipLimits };
+    if (limit && limit > 0) {
+      newLimits[statusId] = parseInt(limit);
+    } else {
+      delete newLimits[statusId];
+    }
+    setWipLimits(newLimits);
+    setEditingWip(null);
+    
+    if (statusColumn) {
+      try {
+        await columnApi.update(statusColumn.id, {
+          config: { ...statusColumn.config, wipLimits: newLimits },
+        });
+        toast.success('Limite WIP mise à jour');
+      } catch (error) {
+        toast.error('Erreur');
+      }
+    }
+  };
 
   // Group items by status
   const itemsByStatus = useMemo(() => {
@@ -201,6 +231,21 @@ export default function BoardKanban() {
     e.preventDefault();
     if (!draggedItem || !statusColumn) return;
 
+    const currentStatus = draggedItem.values?.[statusColumn.id] || statusLabels[0]?.id;
+    
+    // Workflow validation
+    const workflow = currentBoard?.config?.workflow;
+    if (workflow?.enabled && workflow?.transitions) {
+      const allowedTransitions = workflow.transitions[currentStatus] || [];
+      if (!allowedTransitions.includes(statusId)) {
+        const fromLabel = statusLabels.find(l => l.id === currentStatus);
+        const toLabel = statusLabels.find(l => l.id === statusId);
+        toast.error(`Transition non autorisée : ${fromLabel?.name || currentStatus} → ${toLabel?.name || statusId}`);
+        setDraggedItem(null);
+        return;
+      }
+    }
+
     try {
       await itemApi.updateValue(draggedItem.id, statusColumn.id, statusId);
       updateItemValue(draggedItem.id, statusColumn.id, statusId);
@@ -244,7 +289,7 @@ export default function BoardKanban() {
         >
           {/* Column Header */}
           <div className={`p-3 border-b ${
-            status.wipLimit && (itemsByStatus[status.id]?.length || 0) > status.wipLimit
+            wipLimits[status.id] && (itemsByStatus[status.id]?.length || 0) > wipLimits[status.id]
               ? 'border-red-500/50 bg-red-500/5'
               : 'border-surface-700/50'
           }`}>
@@ -258,13 +303,57 @@ export default function BoardKanban() {
                   {status.name || status.label || 'Sans nom'}
                 </span>
                 <span className={`text-sm ${
-                  status.wipLimit && (itemsByStatus[status.id]?.length || 0) > status.wipLimit
+                  wipLimits[status.id] && (itemsByStatus[status.id]?.length || 0) > wipLimits[status.id]
                     ? 'text-red-400 font-medium'
                     : 'text-surface-500'
                 }`}>
                   {itemsByStatus[status.id]?.length || 0}
-                  {status.wipLimit ? `/${status.wipLimit}` : ''}
+                  {wipLimits[status.id] ? `/${wipLimits[status.id]}` : ''}
                 </span>
+              </div>
+              <div className="relative">
+                <button
+                  onClick={() => setEditingWip(editingWip === status.id ? null : status.id)}
+                  className="p-1 rounded hover:bg-surface-700 text-surface-500 hover:text-surface-300 transition-colors"
+                  title="Limite WIP"
+                >
+                  <Settings2 className="w-3.5 h-3.5" />
+                </button>
+                {editingWip === status.id && (
+                  <div className="absolute right-0 top-full mt-1 z-20 bg-surface-800 border border-surface-700 rounded-lg shadow-xl p-3 w-48">
+                    <label className="block text-xs text-surface-400 mb-1.5">Limite WIP</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="Aucune"
+                        defaultValue={wipLimits[status.id] || ''}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleSetWipLimit(status.id, e.target.value);
+                        }}
+                        className="input w-full text-sm"
+                        autoFocus
+                      />
+                      <button
+                        onClick={(e) => {
+                          const input = e.target.closest('.flex').querySelector('input');
+                          handleSetWipLimit(status.id, input.value);
+                        }}
+                        className="px-2 py-1 bg-primary-500 text-white rounded text-xs"
+                      >
+                        OK
+                      </button>
+                    </div>
+                    {wipLimits[status.id] && (
+                      <button
+                        onClick={() => handleSetWipLimit(status.id, 0)}
+                        className="text-xs text-red-400 hover:text-red-300 mt-2"
+                      >
+                        Supprimer la limite
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>

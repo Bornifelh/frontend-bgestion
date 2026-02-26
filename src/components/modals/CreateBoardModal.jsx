@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, FolderKanban } from 'lucide-react';
-import { boardApi } from '../../lib/api';
+import { X, FolderKanban, FileText, ChevronRight } from 'lucide-react';
+import { boardApi, templateApi } from '../../lib/api';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import toast from 'react-hot-toast';
 
@@ -22,12 +22,28 @@ const colors = [
 export default function CreateBoardModal({ isOpen, onClose, workspaceId }) {
   const addBoard = useWorkspaceStore((state) => state.addBoard);
   const [isLoading, setIsLoading] = useState(false);
+  const [step, setStep] = useState('choose');
+  const [templates, setTemplates] = useState([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     icon: '📋',
     color: '#6366f1',
   });
+
+  useEffect(() => {
+    if (isOpen && workspaceId) {
+      setLoadingTemplates(true);
+      templateApi.getAll(workspaceId)
+        .then(res => setTemplates(res.data || []))
+        .catch(() => {})
+        .finally(() => setLoadingTemplates(false));
+    }
+    if (!isOpen) {
+      setStep('choose');
+    }
+  }, [isOpen, workspaceId]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -50,6 +66,29 @@ export default function CreateBoardModal({ isOpen, onClose, workspaceId }) {
       });
     } catch (error) {
       toast.error('Erreur lors de la création');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleApplyTemplate = async (templateId) => {
+    if (!formData.name.trim()) {
+      toast.error('Veuillez d\'abord entrer un nom');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const { data } = await templateApi.apply(templateId, {
+        workspaceId,
+        name: formData.name.trim(),
+        description: formData.description,
+      });
+      addBoard(data);
+      toast.success('Board créé depuis le template');
+      onClose();
+      setFormData({ name: '', description: '', icon: '📋', color: '#6366f1' });
+    } catch (error) {
+      toast.error('Erreur lors de l\'application du template');
     } finally {
       setIsLoading(false);
     }
@@ -84,7 +123,7 @@ export default function CreateBoardModal({ isOpen, onClose, workspaceId }) {
                   Créer un board
                 </h2>
                 <p className="text-sm text-surface-500">
-                  Gérez vos tâches et projets
+                  {step === 'choose' ? 'Choisissez un point de départ' : 'Gérez vos tâches et projets'}
                 </p>
               </div>
             </div>
@@ -96,8 +135,96 @@ export default function CreateBoardModal({ isOpen, onClose, workspaceId }) {
             </button>
           </div>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* Template Selection Step */}
+          {step === 'choose' && (
+            <div className="p-6 space-y-4">
+              <button
+                onClick={() => setStep('blank')}
+                className="w-full flex items-center gap-4 p-4 bg-surface-800/50 rounded-xl hover:bg-surface-800 transition-colors text-left"
+              >
+                <div className="p-3 bg-primary-500/20 rounded-lg">
+                  <FolderKanban className="w-6 h-6 text-primary-400" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-surface-200">Board vide</p>
+                  <p className="text-sm text-surface-500">Commencer de zéro</p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-surface-500" />
+              </button>
+
+              {templates.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-3">Depuis un template</p>
+                  <div className="space-y-2">
+                    {templates.map((tpl) => (
+                      <button
+                        key={tpl.id}
+                        onClick={() => { setStep('template'); setFormData(prev => ({ ...prev, _templateId: tpl.id })); }}
+                        className="w-full flex items-center gap-4 p-4 bg-surface-800/50 rounded-xl hover:bg-surface-800 transition-colors text-left"
+                      >
+                        <div className="p-3 bg-cyan-500/20 rounded-lg">
+                          <FileText className="w-6 h-6 text-cyan-400" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-surface-200">{tpl.name}</p>
+                          <p className="text-sm text-surface-500">{tpl.description || 'Template de board'}</p>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-surface-500" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {loadingTemplates && (
+                <div className="flex justify-center py-4">
+                  <div className="w-5 h-5 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Template name form */}
+          {step === 'template' && (
+            <div className="p-6 space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-surface-300 mb-2">Nom du board</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Nom du board..."
+                  className="input"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-surface-300 mb-2">Description <span className="text-surface-500">(optionnel)</span></label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Décrivez votre board..."
+                  className="input resize-none h-20"
+                />
+              </div>
+              <div className="flex items-center justify-end gap-3 pt-4">
+                <button type="button" onClick={() => setStep('choose')} className="btn btn-secondary">Retour</button>
+                <button
+                  type="button"
+                  disabled={isLoading || !formData.name.trim()}
+                  onClick={() => handleApplyTemplate(formData._templateId)}
+                  className="btn btn-primary"
+                >
+                  {isLoading ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : 'Créer depuis le template'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Blank board form */}
+          {step === 'blank' && <form onSubmit={handleSubmit} className="p-6 space-y-6">
             {/* Icon & Color */}
             <div className="flex items-center gap-6">
               <div
@@ -189,10 +316,10 @@ export default function CreateBoardModal({ isOpen, onClose, workspaceId }) {
             <div className="flex items-center justify-end gap-3 pt-4">
               <button
                 type="button"
-                onClick={onClose}
+                onClick={() => templates.length > 0 ? setStep('choose') : onClose()}
                 className="btn btn-secondary"
               >
-                Annuler
+                {templates.length > 0 ? 'Retour' : 'Annuler'}
               </button>
               <button
                 type="submit"
@@ -206,7 +333,7 @@ export default function CreateBoardModal({ isOpen, onClose, workspaceId }) {
                 )}
               </button>
             </div>
-          </form>
+          </form>}
         </motion.div>
       </motion.div>
     </AnimatePresence>
