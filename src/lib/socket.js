@@ -32,8 +32,8 @@ export const initSocket = () => {
     auth: {
       token: accessToken,
     },
-    transports: ["polling", "websocket"],
-    upgrade: true,
+    transports: ["websocket"],
+    upgrade: false,
     reconnection: true,
     reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
     reconnectionDelay: 1000,
