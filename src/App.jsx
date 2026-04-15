@@ -1,35 +1,46 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from './stores/authStore';
 import Layout from './components/layout/Layout';
 import AuthLayout from './components/layout/AuthLayout';
-import Login from './pages/auth/Login';
-import Register from './pages/auth/Register';
-import ChangePassword from './pages/auth/ChangePassword';
-import Dashboard from './pages/Dashboard';
-import Workspace from './pages/Workspace';
-import Board from './pages/Board';
-import Settings from './pages/Settings';
-import Members from './pages/Members';
-import Budgets from './pages/Budgets';
-import BudgetDetails from './pages/BudgetDetails';
-import TeamEvaluation from './pages/TeamEvaluation';
-import TimeReport from './pages/TimeReport';
-import CustomDashboard from './pages/CustomDashboard';
-import Reports from './pages/Reports';
+import WorkspaceLayout from './components/layout/WorkspaceLayout';
+import ErrorBoundary from './components/ErrorBoundary';
 
-// Tickets
-import SubmitTicket from './pages/tickets/SubmitTicket';
-import AdminTickets from './pages/tickets/AdminTickets';
+const Login = lazy(() => import('./pages/auth/Login'));
+const Register = lazy(() => import('./pages/auth/Register'));
+const ChangePassword = lazy(() => import('./pages/auth/ChangePassword'));
 
-// SDSI (Schéma Directeur des Systèmes d'Information)
-import SDSIDashboard from './pages/sdsi/SDSIDashboard';
-import SDSIProjects from './pages/sdsi/SDSIProjects';
-import SDSIProjectDetails from './pages/sdsi/SDSIProjectDetails';
-import SDSIApplications from './pages/sdsi/SDSIApplications';
-import SDSIKPIs from './pages/sdsi/SDSIKPIs';
-import SDSIResources from './pages/sdsi/SDSIResources';
-import SDSIAxes from './pages/sdsi/SDSIAxes';
-import PermissionsSettings from './pages/settings/PermissionsSettings';
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Workspace = lazy(() => import('./pages/Workspace'));
+const Board = lazy(() => import('./pages/Board'));
+const Settings = lazy(() => import('./pages/Settings'));
+const Members = lazy(() => import('./pages/Members'));
+const Budgets = lazy(() => import('./pages/Budgets'));
+const BudgetDetails = lazy(() => import('./pages/BudgetDetails'));
+const TeamEvaluation = lazy(() => import('./pages/TeamEvaluation'));
+const TimeReport = lazy(() => import('./pages/TimeReport'));
+const CustomDashboard = lazy(() => import('./pages/CustomDashboard'));
+const Reports = lazy(() => import('./pages/Reports'));
+
+const GlobalReports = lazy(() => import('./pages/GlobalReports'));
+const GlobalTasks = lazy(() => import('./pages/GlobalTasks'));
+const GlobalIssues = lazy(() => import('./pages/GlobalIssues'));
+const GlobalTimesheets = lazy(() => import('./pages/GlobalTimesheets'));
+const Collaboration = lazy(() => import('./pages/Collaboration'));
+const Approvals = lazy(() => import('./pages/Approvals'));
+
+const SubmitTicket = lazy(() => import('./pages/tickets/SubmitTicket'));
+const AdminTickets = lazy(() => import('./pages/tickets/AdminTickets'));
+
+const SDSIDashboard = lazy(() => import('./pages/sdsi/SDSIDashboard'));
+const SDSIProjects = lazy(() => import('./pages/sdsi/SDSIProjects'));
+const SDSIProjectDetails = lazy(() => import('./pages/sdsi/SDSIProjectDetails'));
+const SDSIApplications = lazy(() => import('./pages/sdsi/SDSIApplications'));
+const SDSIKPIs = lazy(() => import('./pages/sdsi/SDSIKPIs'));
+const SDSIResources = lazy(() => import('./pages/sdsi/SDSIResources'));
+const SDSIAxes = lazy(() => import('./pages/sdsi/SDSIAxes'));
+const PermissionsSettings = lazy(() => import('./pages/settings/PermissionsSettings'));
+const ITAssetManagement = lazy(() => import('./pages/ITAssetManagement'));
 
 function ProtectedRoute({ children, allowPasswordChange = false }) {
   const { isAuthenticated, isLoading, user } = useAuthStore();
@@ -37,10 +48,10 @@ function ProtectedRoute({ children, allowPasswordChange = false }) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface-950">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-surface-400">Chargement...</p>
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-gray-400 text-sm">Chargement...</p>
         </div>
       </div>
     );
@@ -50,7 +61,6 @@ function ProtectedRoute({ children, allowPasswordChange = false }) {
     return <Navigate to="/login" replace />;
   }
 
-  // Redirect to password change if required (unless we're already on that page)
   if (user?.mustChangePassword && !allowPasswordChange && location.pathname !== '/change-password') {
     return <Navigate to="/change-password" replace />;
   }
@@ -60,88 +70,93 @@ function ProtectedRoute({ children, allowPasswordChange = false }) {
 
 function PublicRoute({ children }) {
   const { isAuthenticated } = useAuthStore();
-
   if (isAuthenticated) {
     return <Navigate to="/" replace />;
   }
-
   return children;
+}
+
+const PageLoader = () => (
+  <div className="flex h-full min-h-[200px] items-center justify-center">
+    <div className="flex flex-col items-center gap-2">
+      <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#F36F21] border-t-transparent" />
+      <span className="text-xs text-gray-400">Chargement...</span>
+    </div>
+  </div>
+);
+
+const SuspenseFallback = () => (
+  <div className="min-h-screen flex items-center justify-center bg-[#F4F5F7]">
+    <div className="flex flex-col items-center gap-3">
+      <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#F36F21] border-t-transparent" />
+      <span className="text-sm text-gray-500">Chargement...</span>
+    </div>
+  </div>
+);
+
+function SuspendedRoute({ children }) {
+  return <Suspense fallback={<PageLoader />}>{children}</Suspense>;
 }
 
 export default function App() {
   return (
-    <Routes>
-      {/* Auth routes */}
-      <Route
-        path="/login"
-        element={
-          <PublicRoute>
-            <AuthLayout>
-              <Login />
-            </AuthLayout>
-          </PublicRoute>
-        }
-      />
-      <Route
-        path="/register"
-        element={
-          <PublicRoute>
-            <AuthLayout>
-              <Register />
-            </AuthLayout>
-          </PublicRoute>
-        }
-      />
-      
-      {/* Change password route (for invited users with temp password) */}
-      <Route
-        path="/change-password"
-        element={
-          <ProtectedRoute allowPasswordChange>
-            <ChangePassword />
-          </ProtectedRoute>
-        }
-      />
+    <ErrorBoundary>
+      <Suspense fallback={<SuspenseFallback />}>
+        <Routes>
+          <Route
+            path="/login"
+            element={<PublicRoute><AuthLayout><Login /></AuthLayout></PublicRoute>}
+          />
+          <Route
+            path="/register"
+            element={<PublicRoute><AuthLayout><Register /></AuthLayout></PublicRoute>}
+          />
+          <Route
+            path="/change-password"
+            element={<ProtectedRoute allowPasswordChange><ChangePassword /></ProtectedRoute>}
+          />
 
-      {/* Protected routes */}
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <Layout />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<Dashboard />} />
-        <Route path="workspace/:workspaceId" element={<Workspace />} />
-        <Route path="workspace/:workspaceId/members" element={<Members />} />
-        <Route path="workspace/:workspaceId/budgets" element={<Budgets />} />
-        <Route path="workspace/:workspaceId/budget/:budgetId" element={<BudgetDetails />} />
-        <Route path="workspace/:workspaceId/evaluation" element={<TeamEvaluation />} />
-        <Route path="workspace/:workspaceId/time-report" element={<TimeReport />} />
-        <Route path="workspace/:workspaceId/dashboard" element={<CustomDashboard />} />
-        <Route path="workspace/:workspaceId/reports" element={<Reports />} />
-        
-        {/* Tickets */}
-        <Route path="workspace/:workspaceId/tickets" element={<SubmitTicket />} />
-        <Route path="workspace/:workspaceId/tickets/admin" element={<AdminTickets />} />
-        
-        <Route path="board/:boardId" element={<Board />} />
-        
-        {/* SDSI Routes - Simplified */}
-        <Route path="workspace/:workspaceId/sdsi" element={<SDSIDashboard />} />
-        <Route path="workspace/:workspaceId/sdsi/axes" element={<SDSIAxes />} />
-        <Route path="workspace/:workspaceId/sdsi/projects" element={<SDSIProjects />} />
-        <Route path="workspace/:workspaceId/sdsi/project/:projectId" element={<SDSIProjectDetails />} />
-        <Route path="workspace/:workspaceId/sdsi/resources" element={<SDSIResources />} />
-        <Route path="workspace/:workspaceId/sdsi/applications" element={<SDSIApplications />} />
-        <Route path="workspace/:workspaceId/sdsi/kpis" element={<SDSIKPIs />} />
-        <Route path="workspace/:workspaceId/permissions" element={<PermissionsSettings />} />
-        <Route path="settings" element={<Settings />} />
-      </Route>
+          <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+            <Route index element={<SuspendedRoute><Dashboard /></SuspendedRoute>} />
 
-      {/* Fallback */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+            {/* Global pages */}
+            <Route path="reports" element={<SuspendedRoute><GlobalReports /></SuspendedRoute>} />
+            <Route path="tasks" element={<SuspendedRoute><GlobalTasks /></SuspendedRoute>} />
+            <Route path="issues" element={<SuspendedRoute><GlobalIssues /></SuspendedRoute>} />
+            <Route path="timesheets" element={<SuspendedRoute><GlobalTimesheets /></SuspendedRoute>} />
+            <Route path="collaboration" element={<SuspendedRoute><Collaboration /></SuspendedRoute>} />
+            <Route path="approvals" element={<SuspendedRoute><Approvals /></SuspendedRoute>} />
+
+            {/* Workspace pages */}
+            <Route path="workspace/:workspaceId" element={<WorkspaceLayout />}>
+              <Route index element={<SuspendedRoute><Workspace /></SuspendedRoute>} />
+              <Route path="members" element={<SuspendedRoute><Members /></SuspendedRoute>} />
+              <Route path="budgets" element={<SuspendedRoute><Budgets /></SuspendedRoute>} />
+              <Route path="budget/:budgetId" element={<SuspendedRoute><BudgetDetails /></SuspendedRoute>} />
+              <Route path="evaluation" element={<SuspendedRoute><TeamEvaluation /></SuspendedRoute>} />
+              <Route path="time-report" element={<SuspendedRoute><TimeReport /></SuspendedRoute>} />
+              <Route path="dashboard" element={<SuspendedRoute><CustomDashboard /></SuspendedRoute>} />
+              <Route path="reports" element={<SuspendedRoute><Reports /></SuspendedRoute>} />
+              <Route path="tickets" element={<SuspendedRoute><SubmitTicket /></SuspendedRoute>} />
+              <Route path="tickets/admin" element={<SuspendedRoute><AdminTickets /></SuspendedRoute>} />
+              <Route path="sdsi" element={<SuspendedRoute><SDSIDashboard /></SuspendedRoute>} />
+              <Route path="sdsi/axes" element={<SuspendedRoute><SDSIAxes /></SuspendedRoute>} />
+              <Route path="sdsi/projects" element={<SuspendedRoute><SDSIProjects /></SuspendedRoute>} />
+              <Route path="sdsi/project/:projectId" element={<SuspendedRoute><SDSIProjectDetails /></SuspendedRoute>} />
+              <Route path="sdsi/resources" element={<SuspendedRoute><SDSIResources /></SuspendedRoute>} />
+              <Route path="sdsi/applications" element={<SuspendedRoute><SDSIApplications /></SuspendedRoute>} />
+              <Route path="sdsi/kpis" element={<SuspendedRoute><SDSIKPIs /></SuspendedRoute>} />
+              <Route path="permissions" element={<SuspendedRoute><PermissionsSettings /></SuspendedRoute>} />
+            </Route>
+
+            <Route path="board/:boardId" element={<SuspendedRoute><Board /></SuspendedRoute>} />
+            <Route path="it-assets" element={<SuspendedRoute><ITAssetManagement /></SuspendedRoute>} />
+            <Route path="settings" element={<SuspendedRoute><Settings /></SuspendedRoute>} />
+          </Route>
+
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
+    </ErrorBoundary>
   );
 }

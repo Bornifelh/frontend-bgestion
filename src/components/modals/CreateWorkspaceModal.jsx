@@ -3,21 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles } from 'lucide-react';
 import { workspaceApi } from '../../lib/api';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
+import { PALETTE_COLORS } from '../../lib/utils';
 import toast from 'react-hot-toast';
 
 const icons = ['🏢', '🏠', '🚀', '💼', '📊', '🎯', '💡', '⚡', '🌟', '🔥'];
-const colors = [
-  '#6366f1',
-  '#8b5cf6',
-  '#ec4899',
-  '#ef4444',
-  '#f97316',
-  '#eab308',
-  '#22c55e',
-  '#14b8a6',
-  '#06b6d4',
-  '#3b82f6',
-];
+const colors = PALETTE_COLORS;
 
 export default function CreateWorkspaceModal({ isOpen, onClose }) {
   const addWorkspace = useWorkspaceStore((state) => state.addWorkspace);
@@ -71,23 +61,23 @@ export default function CreateWorkspaceModal({ isOpen, onClose }) {
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-surface-700">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary-600/20 flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-primary-400" />
+              <div className="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-primary-600" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-surface-100">
+                <h2 className="text-lg font-semibold text-gray-900">
                   Créer un workspace
                 </h2>
-                <p className="text-sm text-surface-500">
+                <p className="text-sm text-gray-400">
                   Organisez vos projets dans un espace dédié
                 </p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="p-2 rounded-lg hover:bg-surface-700 text-surface-400"
+              className="p-2 rounded-lg hover:bg-gray-100 text-gray-500"
             >
               <X className="w-5 h-5" />
             </button>
@@ -105,7 +95,7 @@ export default function CreateWorkspaceModal({ isOpen, onClose }) {
               </div>
               <div className="flex-1 space-y-3">
                 <div>
-                  <label className="block text-xs font-medium text-surface-500 mb-2">
+                  <label className="block text-xs font-medium text-gray-400 mb-2">
                     Icône
                   </label>
                   <div className="flex gap-2 flex-wrap">
@@ -114,9 +104,9 @@ export default function CreateWorkspaceModal({ isOpen, onClose }) {
                         key={icon}
                         type="button"
                         onClick={() => setFormData({ ...formData, icon })}
-                        className={`w-8 h-8 rounded-lg flex items-center justify-center text-lg hover:bg-surface-700 transition-colors ${
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center text-lg hover:bg-gray-100 transition-colors ${
                           formData.icon === icon
-                            ? 'bg-surface-700 ring-2 ring-primary-500'
+                            ? 'bg-gray-100 ring-2 ring-primary-500'
                             : ''
                         }`}
                       >
@@ -126,7 +116,7 @@ export default function CreateWorkspaceModal({ isOpen, onClose }) {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-surface-500 mb-2">
+                  <label className="block text-xs font-medium text-gray-400 mb-2">
                     Couleur
                   </label>
                   <div className="flex gap-2">
@@ -137,7 +127,7 @@ export default function CreateWorkspaceModal({ isOpen, onClose }) {
                         onClick={() => setFormData({ ...formData, color })}
                         className={`w-6 h-6 rounded-full transition-transform ${
                           formData.color === color
-                            ? 'ring-2 ring-offset-2 ring-offset-surface-900 ring-white scale-110'
+                            ? 'ring-2 ring-offset-2 ring-offset-white ring-white scale-110'
                             : 'hover:scale-110'
                         }`}
                         style={{ backgroundColor: color }}
@@ -150,7 +140,7 @@ export default function CreateWorkspaceModal({ isOpen, onClose }) {
 
             {/* Name */}
             <div>
-              <label className="block text-sm font-medium text-surface-300 mb-2">
+              <label className="block text-sm font-medium text-gray-600 mb-2">
                 Nom du workspace
               </label>
               <input
@@ -168,9 +158,9 @@ export default function CreateWorkspaceModal({ isOpen, onClose }) {
 
             {/* Description */}
             <div>
-              <label className="block text-sm font-medium text-surface-300 mb-2">
+              <label className="block text-sm font-medium text-gray-600 mb-2">
                 Description{' '}
-                <span className="text-surface-500">(optionnel)</span>
+                <span className="text-gray-400">(optionnel)</span>
               </label>
               <textarea
                 value={formData.description}

@@ -1,32 +1,23 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
+  Home,
   LayoutDashboard,
-  FolderKanban,
-  Settings,
-  Plus,
   ChevronDown,
   ChevronRight,
   LogOut,
-  Users,
-  Wallet,
-  Map,
-  Server,
-  TrendingUp,
-  Shield,
-  Award,
-  Ticket,
+  Settings,
+  Plus,
   Star,
-  Clock,
-  BarChart3,
+  Cpu,
 } from 'lucide-react';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useAuthStore } from '../../stores/authStore';
-import { favoriteApi } from '../../lib/api';
+import { favoriteApi, boardApi } from '../../lib/api';
 import CreateWorkspaceModal from '../modals/CreateWorkspaceModal';
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen, onClose }) {
   const location = useLocation();
   const navigate = useNavigate();
   const workspaces = useWorkspaceStore((state) => state.workspaces);
@@ -34,16 +25,79 @@ export default function Sidebar() {
   const [expandedWorkspaces, setExpandedWorkspaces] = useState({});
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [favorites, setFavorites] = useState([]);
+  const [workspaceBoards, setWorkspaceBoards] = useState({});
+  const [enabledModules, setEnabledModules] = useState({});
+  const [moduleAccessMap, setModuleAccessMap] = useState({});
+
+  const loadModuleAccess = () => {
+    try {
+      const saved = localStorage.getItem('globalUserModuleAccess');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const accessAll = {};
+        Object.entries(parsed).forEach(([uid, mods]) => {
+          if (mods && (mods.it_asset_management || mods.project_management)) {
+            accessAll[uid] = true;
+          }
+        });
+        setModuleAccessMap(accessAll);
+      }
+    } catch (_) {}
+    // Fallback: also check old per-workspace format
+    workspaces.forEach(ws => {
+      try {
+        const saved = localStorage.getItem(`itAccess_${ws.id}`);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          Object.entries(parsed.it_asset_management || {}).forEach(([uid, val]) => {
+            if (val) setModuleAccessMap(prev => ({ ...prev, [uid]: true }));
+          });
+        }
+      } catch (_) {}
+    });
+  };
 
   useEffect(() => {
     favoriteApi.getAll().then(res => setFavorites(res.data || [])).catch(() => {});
+    try {
+      const saved = localStorage.getItem('moduleSettings');
+      if (saved) setEnabledModules(JSON.parse(saved));
+    } catch (e) {}
   }, []);
 
+  useEffect(() => { loadModuleAccess(); }, [workspaces]);
+
+  useEffect(() => {
+    const handleStorage = (e) => {
+      if (e.key === 'moduleSettings') {
+        try { setEnabledModules(JSON.parse(e.newValue)); } catch (err) {}
+      }
+      if (e.key?.startsWith('itAccess_')) loadModuleAccess();
+    };
+    const handleModulesUpdated = (e) => { setEnabledModules(e.detail); };
+    const handleAccessUpdated = () => { loadModuleAccess(); };
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('modulesUpdated', handleModulesUpdated);
+    window.addEventListener('moduleAccessUpdated', handleAccessUpdated);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('modulesUpdated', handleModulesUpdated);
+      window.removeEventListener('moduleAccessUpdated', handleAccessUpdated);
+    };
+  }, [workspaces]);
+
+  useEffect(() => {
+    Object.keys(expandedWorkspaces).forEach((wsId) => {
+      if (expandedWorkspaces[wsId] && !workspaceBoards[wsId]) {
+        boardApi.getByWorkspace(wsId)
+          .then(res => setWorkspaceBoards(prev => ({ ...prev, [wsId]: res.data || [] })))
+          .catch(() => {});
+      }
+    });
+  }, [expandedWorkspaces]);
+
   const toggleWorkspace = (workspaceId) => {
-    setExpandedWorkspaces((prev) => ({
-      ...prev,
-      [workspaceId]: !prev[workspaceId],
-    }));
+    setExpandedWorkspaces(prev => ({ ...prev, [workspaceId]: !prev[workspaceId] }));
   };
 
   const handleLogout = async () => {
@@ -55,309 +109,144 @@ export default function Sidebar() {
 
   return (
     <>
-      <aside className="sidebar">
-        {/* Logo */}
-        <div className="p-6 border-b border-surface-800">
-          <Link to="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary-600 flex items-center justify-center shadow-lg shadow-primary-600/20">
-              <svg viewBox="0 0 24 24" className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-              </svg>
-            </div>
-            <span className="font-semibold text-xl text-surface-100 tracking-tight">
-              GesProjet
-            </span>
+      <aside
+        className="sidebar"
+        style={{ transform: isOpen ? 'translateX(0)' : 'translateX(-100%)' }}
+      >
+        {/* Board navigation */}
+        <nav className="flex-1 overflow-y-auto py-3 scrollbar-hide">
+          {/* Quick links */}
+          <Link to="/" className={`sidebar-item ${isActive('/') ? 'active' : ''}`}>
+            <Home className="w-4 h-4" />
+            <span>Accueil</span>
           </Link>
-        </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-4 scrollbar-hide">
-          {/* Main nav */}
-          <div className="mb-6">
-            <Link
-              to="/"
-              className={`sidebar-item ${isActive('/') ? 'active' : ''}`}
-            >
-              <LayoutDashboard className="w-5 h-5" />
-              <span>Tableau de bord</span>
+          {enabledModules.it_asset_management && (user?.id && moduleAccessMap[user.id]) && (
+            <Link to="/it-assets" className={`sidebar-item ${isActive('/it-assets') ? 'active' : ''}`}>
+              <Cpu className="w-4 h-4" />
+              <span>Parc Informatique</span>
             </Link>
-          </div>
+          )}
 
-          {/* Favorites */}
+          {/* Starred / Favorites */}
           {favorites.length > 0 && (
-            <div className="mb-4">
-              <div className="px-4 mb-2">
-                <span className="text-xs font-semibold text-surface-500 uppercase tracking-wider flex items-center gap-1">
-                  <Star className="w-3 h-3" />
-                  Favoris
-                </span>
+            <>
+              <div className="sidebar-section-title">
+                <Star className="w-3 h-3 inline mr-1" />
+                Favoris
               </div>
-              <div className="space-y-0.5">
-                {favorites.map((fav) => (
-                  <Link
-                    key={fav.id}
-                    to={fav.entity_type === 'board' ? `/board/${fav.entity_id}` : `/workspace/${fav.entity_id}`}
-                    className={`sidebar-item text-sm ${
-                      location.pathname === (fav.entity_type === 'board' ? `/board/${fav.entity_id}` : `/workspace/${fav.entity_id}`)
-                        ? 'active' : ''
-                    }`}
-                  >
-                    <Star className="w-4 h-4 text-yellow-400" />
+              {favorites.slice(0, 5).map((fav) => {
+                const favPath = fav.entity_type === 'board' ? `/board/${fav.entity_id}` : `/workspace/${fav.entity_id}`;
+                return (
+                  <Link key={fav.id} to={favPath} className={`sidebar-item ${location.pathname === favPath ? 'active' : ''}`}>
+                    <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
                     <span className="truncate">{fav.entity_name || 'Sans nom'}</span>
                   </Link>
-                ))}
-              </div>
-            </div>
+                );
+              })}
+            </>
           )}
 
           {/* Workspaces */}
-          <div className="px-4 mb-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-surface-500 uppercase tracking-wider">
-                Espaces de travail
-              </span>
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="p-1 rounded-lg hover:bg-surface-800 text-surface-500 hover:text-surface-300 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-              </button>
-            </div>
+          <div className="sidebar-section-title flex items-center justify-between">
+            <span>Espaces de travail</span>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="p-0.5 rounded text-white/40 hover:text-white hover:bg-white/10"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
           </div>
 
-          <div className="space-y-1">
-            {workspaces.map((workspace) => (
-              <div key={workspace.id}>
+          {workspaces.map((workspace) => (
+            <div key={workspace.id}>
+              <div className="flex items-center">
                 <button
                   onClick={() => toggleWorkspace(workspace.id)}
-                  className="w-full sidebar-item justify-between"
+                  className={`sidebar-item flex-1 ${location.pathname.startsWith(`/workspace/${workspace.id}`) ? 'active' : ''}`}
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="text-lg">{workspace.icon}</span>
-                    <span className="truncate">{workspace.name}</span>
+                  <div
+                    className="w-5 h-5 rounded-[3px] text-[10px] font-bold flex items-center justify-center flex-shrink-0 text-white"
+                    style={{ backgroundColor: workspace.color || '#0079BF' }}
+                  >
+                    {(workspace.name || 'W')[0].toUpperCase()}
                   </div>
+                  <span className="truncate flex-1">{workspace.name}</span>
                   {expandedWorkspaces[workspace.id] ? (
-                    <ChevronDown className="w-4 h-4 text-surface-500" />
+                    <ChevronDown className="w-3 h-3 flex-shrink-0 text-white/40" />
                   ) : (
-                    <ChevronRight className="w-4 h-4 text-surface-500" />
+                    <ChevronRight className="w-3 h-3 flex-shrink-0 text-white/40" />
                   )}
                 </button>
+              </div>
 
-                <AnimatePresence>
-                  {expandedWorkspaces[workspace.id] && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="overflow-hidden"
-                    >
+              <AnimatePresence>
+                {expandedWorkspaces[workspace.id] && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.12 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="ml-5 pl-3 border-l border-white/10 py-1">
                       <Link
                         to={`/workspace/${workspace.id}`}
-                        className={`sidebar-item pl-12 text-sm ${
-                          location.pathname === `/workspace/${workspace.id}`
-                            ? 'active'
-                            : ''
-                        }`}
+                        className={`sidebar-item text-xs py-1 ${isActive(`/workspace/${workspace.id}`) ? 'text-white' : ''}`}
                       >
-                        <FolderKanban className="w-4 h-4" />
+                        <LayoutDashboard className="w-3.5 h-3.5" />
                         <span>Boards</span>
                       </Link>
                       <Link
-                        to={`/workspace/${workspace.id}/members`}
-                        className={`sidebar-item pl-12 text-sm ${
-                          location.pathname === `/workspace/${workspace.id}/members`
-                            ? 'active'
-                            : ''
-                        }`}
-                      >
-                        <Users className="w-4 h-4" />
-                        <span>Membres</span>
-                      </Link>
-                      <Link
-                        to={`/workspace/${workspace.id}/evaluation`}
-                        className={`sidebar-item pl-12 text-sm ${
-                          location.pathname === `/workspace/${workspace.id}/evaluation`
-                            ? 'active'
-                            : ''
-                        }`}
-                      >
-                        <Award className="w-4 h-4" />
-                        <span>Évaluation équipe</span>
-                      </Link>
-                      <Link
-                        to={`/workspace/${workspace.id}/time-report`}
-                        className={`sidebar-item pl-12 text-sm ${
-                          location.pathname === `/workspace/${workspace.id}/time-report`
-                            ? 'active'
-                            : ''
-                        }`}
-                      >
-                        <Clock className="w-4 h-4" />
-                        <span>Suivi du temps</span>
-                      </Link>
-                      <Link
-                        to={`/workspace/${workspace.id}/dashboard`}
-                        className={`sidebar-item pl-12 text-sm ${
-                          location.pathname === `/workspace/${workspace.id}/dashboard`
-                            ? 'active'
-                            : ''
-                        }`}
-                      >
-                        <LayoutDashboard className="w-4 h-4" />
-                        <span>Dashboard perso</span>
-                      </Link>
-                      <Link
-                        to={`/workspace/${workspace.id}/tickets`}
-                        className={`sidebar-item pl-12 text-sm ${
-                          location.pathname === `/workspace/${workspace.id}/tickets`
-                            ? 'active'
-                            : ''
-                        }`}
-                      >
-                        <Ticket className="w-4 h-4" />
-                        <span>Mes tickets</span>
-                      </Link>
-                      <Link
-                        to={`/workspace/${workspace.id}/tickets/admin`}
-                        className={`sidebar-item pl-12 text-sm ${
-                          location.pathname === `/workspace/${workspace.id}/tickets/admin`
-                            ? 'active'
-                            : ''
-                        }`}
-                      >
-                        <Settings className="w-4 h-4" />
-                        <span>Gestion tickets</span>
-                      </Link>
-                      <Link
-                        to={`/workspace/${workspace.id}/reports`}
-                        className={`sidebar-item pl-12 text-sm ${
-                          location.pathname === `/workspace/${workspace.id}/reports`
-                            ? 'active'
-                            : ''
-                        }`}
-                      >
-                        <BarChart3 className="w-4 h-4" />
-                        <span>Rapports</span>
-                      </Link>
-                      <Link
                         to={`/workspace/${workspace.id}/permissions`}
-                        className={`sidebar-item pl-12 text-sm ${
-                          location.pathname === `/workspace/${workspace.id}/permissions`
-                            ? 'active'
-                            : ''
-                        }`}
+                        className={`sidebar-item text-xs py-1 ${location.pathname.includes(`/workspace/${workspace.id}/permissions`) ? 'text-white' : ''}`}
                       >
-                        <Shield className="w-4 h-4" />
-                        <span>Permissions</span>
+                        <Settings className="w-3.5 h-3.5" />
+                        <span>Parametres</span>
                       </Link>
-                      <Link
-                        to={`/workspace/${workspace.id}/budgets`}
-                        className={`sidebar-item pl-12 text-sm ${
-                          location.pathname.startsWith(`/workspace/${workspace.id}/budget`)
-                            ? 'active'
-                            : ''
-                        }`}
-                      >
-                        <Wallet className="w-4 h-4" />
-                        <span>Budgets</span>
-                      </Link>
-                      
-                      {/* SDSI Section - Simplified */}
-                      <div className="mt-2 pt-2 border-t border-surface-800/50">
-                        <span className="text-xs text-surface-500 pl-12 block mb-1">Schéma Directeur SI</span>
-                        <Link
-                          to={`/workspace/${workspace.id}/sdsi`}
-                          className={`sidebar-item pl-12 text-sm ${
-                            location.pathname === `/workspace/${workspace.id}/sdsi`
-                              ? 'active'
-                              : ''
-                          }`}
-                        >
-                          <Map className="w-4 h-4" />
-                          <span>Tableau de bord</span>
-                        </Link>
-                        <Link
-                          to={`/workspace/${workspace.id}/sdsi/projects`}
-                          className={`sidebar-item pl-12 text-sm ${
-                            location.pathname.includes(`/workspace/${workspace.id}/sdsi/project`)
-                              ? 'active'
-                              : ''
-                          }`}
-                        >
-                          <FolderKanban className="w-4 h-4" />
-                          <span>Portefeuille projets</span>
-                        </Link>
-                        <Link
-                          to={`/workspace/${workspace.id}/sdsi/resources`}
-                          className={`sidebar-item pl-12 text-sm ${
-                            location.pathname === `/workspace/${workspace.id}/sdsi/resources`
-                              ? 'active'
-                              : ''
-                          }`}
-                        >
-                          <Users className="w-4 h-4" />
-                          <span>Ressources</span>
-                        </Link>
-                        <Link
-                          to={`/workspace/${workspace.id}/sdsi/applications`}
-                          className={`sidebar-item pl-12 text-sm ${
-                            location.pathname === `/workspace/${workspace.id}/sdsi/applications`
-                              ? 'active'
-                              : ''
-                          }`}
-                        >
-                          <Server className="w-4 h-4" />
-                          <span>Applications</span>
-                        </Link>
-                        <Link
-                          to={`/workspace/${workspace.id}/sdsi/kpis`}
-                          className={`sidebar-item pl-12 text-sm ${
-                            location.pathname === `/workspace/${workspace.id}/sdsi/kpis`
-                              ? 'active'
-                              : ''
-                          }`}
-                        >
-                          <TrendingUp className="w-4 h-4" />
-                          <span>Indicateurs</span>
-                        </Link>
+
+                      {/* Boards list */}
+                      <div className="mt-1">
+                        <div className="px-4 py-1 text-[10px] font-semibold text-white/30 uppercase">
+                          Vos boards
+                        </div>
+                        {(workspaceBoards[workspace.id] || []).map((board) => (
+                          <Link
+                            key={board.id}
+                            to={`/board/${board.id}`}
+                            className={`sidebar-item text-xs py-1 ${isActive(`/board/${board.id}`) ? 'text-white' : ''}`}
+                          >
+                            <div
+                              className="w-5 h-3.5 rounded-sm flex-shrink-0"
+                              style={{ backgroundColor: board.color || '#0079BF' }}
+                            />
+                            <span className="truncate">{board.name}</span>
+                          </Link>
+                        ))}
                       </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            ))}
-          </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          ))}
         </nav>
 
-        {/* User section */}
-        <div className="p-4 border-t border-surface-800">
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-surface-800/50">
-            <div className="avatar">
-              {user?.firstName?.[0]}
-              {user?.lastName?.[0]}
+        {/* User + collapse */}
+        <div className="px-2 py-2 border-t border-white/10">
+          <div className="flex items-center gap-2 px-2 py-1.5">
+            <div className="avatar avatar-sm flex-shrink-0">
+              {user?.firstName?.[0]}{user?.lastName?.[0]}
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-surface-200 truncate">
-                {user?.firstName} {user?.lastName}
-              </p>
-              <p className="text-xs text-surface-500 truncate">{user?.email}</p>
-            </div>
-            <div className="flex items-center gap-1">
-              <Link
-                to="/settings"
-                className="p-2 rounded-lg hover:bg-surface-700 text-surface-400 hover:text-surface-200 transition-colors"
-              >
-                <Settings className="w-4 h-4" />
-              </Link>
-              <button
-                onClick={handleLogout}
-                className="p-2 rounded-lg hover:bg-surface-700 text-surface-400 hover:text-red-400 transition-colors"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            </div>
+            <span className="text-xs text-white/70 truncate flex-1">
+              {user?.firstName} {user?.lastName}
+            </span>
+            <Link to="/settings" className="p-1 text-white/40 hover:text-white rounded">
+              <Settings className="w-3.5 h-3.5" />
+            </Link>
+            <button onClick={handleLogout} className="p-1 text-white/40 hover:text-accent-red rounded">
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
       </aside>

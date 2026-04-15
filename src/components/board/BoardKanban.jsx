@@ -1,25 +1,50 @@
 import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, MoreHorizontal, Trash2, Edit2, GripVertical, User, Calendar, CheckCircle2, Settings2 } from 'lucide-react';
+import {
+  Plus, MoreHorizontal, Trash2, Edit2, Calendar,
+  MessageSquare, Paperclip,
+} from 'lucide-react';
 import { useBoardStore } from '../../stores/boardStore';
 import { itemApi, memberApi, columnApi } from '../../lib/api';
-import { format, isValid } from 'date-fns';
+import { format, isValid, startOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 import EditItemModal from '../modals/EditItemModal';
 
+function statusBarColor(statusId, fallbackHex) {
+  const s = String(statusId || '').toLowerCase();
+  if (s === 'done' || s.includes('done') || s === 'terminé') return '#22c55e';
+  if (s === 'in_progress' || s.includes('progress') || s === 'en_cours') return '#F36F21';
+  if (s === 'blocked' || s.includes('block') || s === 'bloqué') return '#EF4444';
+  if (s === 'todo' || s.includes('todo') || s === 'a_faire') return '#173D68';
+  return fallbackHex || '#173D68';
+}
+
+function initialsFromName(name) {
+  if (!name) return '?';
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+}
+
+function avatarBg(seed) {
+  const colors = ['#173D68', '#F36F21', '#1E5090', '#22c55e', '#8b5cf6', '#ec4899'];
+  const n = String(seed || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  return colors[n % colors.length];
+}
+
 export default function BoardKanban() {
-  const { currentBoard, columns, groups, items, addItem, updateItemValue, deleteItem } = useBoardStore();
+  const { currentBoard, columns, items, addItem, updateItemValue, deleteItem } = useBoardStore();
   const [newItemName, setNewItemName] = useState({});
   const [showNewItem, setShowNewItem] = useState({});
   const [activeMenu, setActiveMenu] = useState(null);
+  const [activeListMenu, setActiveListMenu] = useState(null);
   const [draggedItem, setDraggedItem] = useState(null);
   const [workspaceMembers, setWorkspaceMembers] = useState([]);
   const [editingItem, setEditingItem] = useState(null);
   const [wipLimits, setWipLimits] = useState({});
   const [editingWip, setEditingWip] = useState(null);
 
-  // Load workspace members for displaying names
   useEffect(() => {
     const loadMembers = async () => {
       if (!currentBoard?.workspaceId) return;
@@ -33,157 +58,50 @@ export default function BoardKanban() {
     loadMembers();
   }, [currentBoard?.workspaceId]);
 
-  // Helper to get member name by ID
   const getMemberName = (memberId) => {
-    const member = workspaceMembers.find(m => m.id === memberId);
-    if (member) {
-      return `${member.firstName || ''} ${member.lastName || ''}`.trim() || member.email?.split('@')[0] || 'Membre';
-    }
+    const member = workspaceMembers.find((m) => m.id === memberId);
+    if (member) return `${member.firstName || ''} ${member.lastName || ''}`.trim() || member.email?.split('@')[0] || 'Membre';
     return null;
   };
 
-  // Helper to format column values for display
-  const formatColumnValue = (column, value) => {
-    if (!value) return null;
+  const statusColumn = useMemo(() => columns.find((col) => col.type === 'status') || columns[0], [columns]);
 
-    switch (column.type) {
-      case 'person': {
-        // Value can be: array of IDs, single ID string, or object with userIds
-        let userIds = [];
-        if (Array.isArray(value)) {
-          userIds = value;
-        } else if (typeof value === 'string') {
-          userIds = [value];
-        } else if (value?.userIds) {
-          userIds = Array.isArray(value.userIds) ? value.userIds : [value.userIds];
-        }
-        
-        if (userIds.length === 0) return null;
-        
-        const names = userIds
-          .map(id => getMemberName(id))
-          .filter(Boolean);
-        
-        if (names.length === 0) return null;
-        
-        return (
-          <div className="flex items-center gap-1">
-            <User className="w-3 h-3 text-primary-400" />
-            <span className="text-surface-200 truncate font-medium">
-              {names.join(', ')}
-            </span>
-          </div>
-        );
-      }
-      
-      case 'date': {
-        const dateStr = typeof value === 'object' ? value?.date : value;
-        if (!dateStr) return null;
-        const date = new Date(dateStr);
-        if (!isValid(date)) return null;
-        
-        return (
-          <div className="flex items-center gap-1">
-            <Calendar className="w-3 h-3 text-surface-500" />
-            <span className="text-surface-300">
-              {format(date, 'd MMM', { locale: fr })}
-            </span>
-          </div>
-        );
-      }
-      
-      case 'progress': {
-        const progress = typeof value === 'object' ? (value?.progress ?? 0) : (parseInt(value) || 0);
-        const color = progress >= 100 ? '#22c55e' : progress >= 50 ? '#eab308' : '#ef4444';
-        
-        return (
-          <div className="flex items-center gap-1">
-            <div className="w-12 h-1.5 bg-surface-700 rounded-full overflow-hidden">
-              <div 
-                className="h-full rounded-full transition-all"
-                style={{ width: `${progress}%`, backgroundColor: color }}
-              />
-            </div>
-            <span className="text-surface-400 text-[10px]">{progress}%</span>
-          </div>
-        );
-      }
-      
-      case 'priority': {
-        const priorityLabels = column.labels || [];
-        const label = priorityLabels.find(l => l.id === value || l.name === value);
-        if (label) {
-          return (
-            <span 
-              className="px-1.5 py-0.5 rounded text-[10px] font-medium"
-              style={{ backgroundColor: `${label.color}20`, color: label.color }}
-            >
-              {label.name || label.label}
-            </span>
-          );
-        }
-        return <span className="text-surface-400">{String(value)}</span>;
-      }
-      
-      default:
-        if (typeof value === 'object') {
-          return null; // Don't show complex objects
-        }
-        return <span className="text-surface-400 truncate">{String(value)}</span>;
-    }
-  };
-
-  // Find status column for Kanban grouping
-  const statusColumn = useMemo(() => {
-    return columns.find(col => col.type === 'status') || columns[0];
-  }, [columns]);
-
-  // Get status labels or create default ones
   const statusLabels = useMemo(() => {
-    if (statusColumn?.labels?.length > 0) {
-      return statusColumn.labels;
-    }
+    if (statusColumn?.labels?.length > 0) return statusColumn.labels;
     return [
-      { id: 'todo', name: 'À faire', color: '#6b7280' },
-      { id: 'in_progress', name: 'En cours', color: '#3b82f6' },
-      { id: 'done', name: 'Terminé', color: '#10b981' },
+      { id: 'todo', name: 'A faire', color: '#173D68' },
+      { id: 'in_progress', name: 'En cours', color: '#F36F21' },
+      { id: 'done', name: 'Termine', color: '#22c55e' },
     ];
   }, [statusColumn]);
 
-  // Initialize WIP limits from column config
+  const dateColumn = useMemo(() => columns.find((c) => c.type === 'date' && c.id !== statusColumn?.id), [columns, statusColumn?.id]);
+  const personColumn = useMemo(() => columns.find((c) => c.type === 'person' && c.id !== statusColumn?.id), [columns, statusColumn?.id]);
+  const priorityColumn = useMemo(() => columns.find((c) => c.type === 'priority' && c.id !== statusColumn?.id), [columns, statusColumn?.id]);
+
   useEffect(() => {
-    if (statusColumn?.config?.wipLimits) {
-      setWipLimits(statusColumn.config.wipLimits);
-    }
+    if (statusColumn?.config?.wipLimits) setWipLimits(statusColumn.config.wipLimits);
   }, [statusColumn]);
 
   const handleSetWipLimit = async (statusId, limit) => {
     const newLimits = { ...wipLimits };
-    if (limit && limit > 0) {
-      newLimits[statusId] = parseInt(limit);
-    } else {
-      delete newLimits[statusId];
-    }
+    if (limit && limit > 0) newLimits[statusId] = parseInt(limit, 10);
+    else delete newLimits[statusId];
     setWipLimits(newLimits);
     setEditingWip(null);
-    
+    setActiveListMenu(null);
     if (statusColumn) {
       try {
-        await columnApi.update(statusColumn.id, {
-          config: { ...statusColumn.config, wipLimits: newLimits },
-        });
-        toast.success('Limite WIP mise à jour');
-      } catch (error) {
-        toast.error('Erreur');
-      }
+        await columnApi.update(statusColumn.id, { config: { ...statusColumn.config, wipLimits: newLimits } });
+        toast.success('Limite WIP mise a jour');
+      } catch (error) { toast.error('Erreur'); }
     }
   };
 
-  // Group items by status
   const itemsByStatus = useMemo(() => {
     const result = {};
-    statusLabels.forEach(label => {
-      result[label.id] = items.filter(item => {
+    statusLabels.forEach((label) => {
+      result[label.id] = items.filter((item) => {
         const value = item.values?.[statusColumn?.id];
         return value === label.id || (!value && label.id === statusLabels[0]?.id);
       });
@@ -191,68 +109,74 @@ export default function BoardKanban() {
     return result;
   }, [items, statusColumn, statusLabels]);
 
+  const getPersonUserIds = (item) => {
+    if (!personColumn) return [];
+    const value = item.values?.[personColumn.id];
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'string') return [value];
+    if (value?.userIds) return Array.isArray(value.userIds) ? value.userIds : [value.userIds];
+    return [];
+  };
+
+  const getDueDateDisplay = (item, listStatusId) => {
+    if (!dateColumn) return null;
+    const raw = item.values?.[dateColumn.id];
+    const dateStr = typeof raw === 'object' ? raw?.date : raw;
+    if (!dateStr) return null;
+    const date = new Date(dateStr);
+    if (!isValid(date)) return null;
+    const doneList = String(listStatusId || '').toLowerCase().includes('done');
+    const overdue = !doneList && startOfDay(date) < startOfDay(new Date());
+    return { text: format(date, 'd MMM', { locale: fr }), overdue };
+  };
+
+  const getPriorityDotColor = (item) => {
+    if (!priorityColumn) return null;
+    const value = item.values?.[priorityColumn.id];
+    if (value == null || value === '') return null;
+    const labels = priorityColumn.labels || [];
+    const label = labels.find((l) => l.id === value || l.name === value);
+    return label?.color || '#94a3b8';
+  };
+
+  const commentCount = (item) => item?._count?.comments ?? item?.commentCount ?? item?.commentsCount ?? item?.nbComments ?? 0;
+  const attachmentCount = (item) => item?._count?.attachments ?? item?.attachmentCount ?? item?.attachmentsCount ?? item?.nbAttachments ?? 0;
+
   const handleCreateItem = async (statusId) => {
     const name = newItemName[statusId];
     if (!name?.trim()) return;
-
     try {
-      const response = await itemApi.create({
-        boardId: currentBoard.id,
-        name: name.trim(),
-      });
-      
-      // Set initial status value
-      if (statusColumn) {
-        await itemApi.updateValue(response.data.id, statusColumn.id, statusId);
-      }
-      
-      addItem({
-        ...response.data,
-        values: { [statusColumn?.id]: statusId }
-      });
+      const response = await itemApi.create({ boardId: currentBoard.id, name: name.trim() });
+      if (statusColumn) await itemApi.updateValue(response.data.id, statusColumn.id, statusId);
+      addItem({ ...response.data, values: { [statusColumn?.id]: statusId } });
       setNewItemName({ ...newItemName, [statusId]: '' });
       setShowNewItem({ ...showNewItem, [statusId]: false });
-    } catch (error) {
-      toast.error('Erreur lors de la création');
-    }
+    } catch (error) { toast.error('Erreur lors de la creation'); }
   };
 
-  const handleDragStart = (e, item) => {
-    setDraggedItem(item);
-    e.dataTransfer.effectAllowed = 'move';
-  };
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
+  const handleDragStart = (e, item) => { setDraggedItem(item); e.dataTransfer.effectAllowed = 'move'; };
+  const handleDragOver = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; };
 
   const handleDrop = async (e, statusId) => {
     e.preventDefault();
     if (!draggedItem || !statusColumn) return;
-
     const currentStatus = draggedItem.values?.[statusColumn.id] || statusLabels[0]?.id;
-    
-    // Workflow validation
     const workflow = currentBoard?.config?.workflow;
     if (workflow?.enabled && workflow?.transitions) {
       const allowedTransitions = workflow.transitions[currentStatus] || [];
       if (!allowedTransitions.includes(statusId)) {
-        const fromLabel = statusLabels.find(l => l.id === currentStatus);
-        const toLabel = statusLabels.find(l => l.id === statusId);
-        toast.error(`Transition non autorisée : ${fromLabel?.name || currentStatus} → ${toLabel?.name || statusId}`);
+        const fromLabel = statusLabels.find((l) => l.id === currentStatus);
+        const toLabel = statusLabels.find((l) => l.id === statusId);
+        toast.error(`Transition non autorisee : ${fromLabel?.name || currentStatus} → ${toLabel?.name || statusId}`);
         setDraggedItem(null);
         return;
       }
     }
-
     try {
       await itemApi.updateValue(draggedItem.id, statusColumn.id, statusId);
       updateItemValue(draggedItem.id, statusColumn.id, statusId);
-      toast.success('Statut mis à jour');
-    } catch (error) {
-      toast.error('Erreur');
-    }
+      toast.success('Statut mis a jour');
+    } catch (error) { toast.error('Erreur'); }
     setDraggedItem(null);
   };
 
@@ -260,239 +184,259 @@ export default function BoardKanban() {
     try {
       await itemApi.delete(itemId);
       deleteItem(itemId);
-      toast.success('Item supprimé');
-    } catch (error) {
-      toast.error('Erreur');
-    }
+      toast.success('Item supprime');
+    } catch (error) { toast.error('Erreur'); }
     setActiveMenu(null);
   };
 
   if (!statusColumn) {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-center">
-        <p className="text-surface-400 mb-4">Ajoutez une colonne "Statut" pour utiliser la vue Kanban</p>
-        <p className="text-sm text-surface-500">
-          La vue Kanban utilise une colonne de type Statut pour organiser les items
-        </p>
+        <p className="text-gray-500 mb-4">Ajoutez une colonne « Statut » pour utiliser la vue Kanban</p>
+        <p className="text-sm text-gray-400">La vue Kanban utilise une colonne de type Statut pour organiser les items</p>
       </div>
     );
   }
 
   return (
-    <div className="flex gap-4 h-full overflow-x-auto pb-4">
-      {statusLabels.map((status) => (
-        <div
-          key={status.id}
-          className="flex-shrink-0 w-72 flex flex-col bg-surface-800/30 rounded-xl"
-          onDragOver={handleDragOver}
-          onDrop={(e) => handleDrop(e, status.id)}
-        >
-          {/* Column Header */}
-          <div className={`p-3 border-b ${
-            wipLimits[status.id] && (itemsByStatus[status.id]?.length || 0) > wipLimits[status.id]
-              ? 'border-red-500/50 bg-red-500/5'
-              : 'border-surface-700/50'
-          }`}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: status.color || '#6b7280' }}
-                />
-                <span className="font-medium text-surface-200 text-sm">
-                  {status.name || status.label || 'Sans nom'}
-                </span>
-                <span className={`text-sm ${
-                  wipLimits[status.id] && (itemsByStatus[status.id]?.length || 0) > wipLimits[status.id]
-                    ? 'text-red-400 font-medium'
-                    : 'text-surface-500'
+    <div className="flex h-full min-h-0 gap-3 overflow-x-auto overflow-y-hidden p-3">
+      {statusLabels.map((status) => {
+        const count = itemsByStatus[status.id]?.length || 0;
+        const wipOver = wipLimits[status.id] && count > wipLimits[status.id];
+        const barColor = statusBarColor(status.id, status.color);
+
+        return (
+          <div
+            key={status.id}
+            className={`flex w-[280px] shrink-0 flex-col rounded-xl bg-white border shadow-sm max-h-full ${
+              wipOver ? 'ring-2 ring-red-400/60 border-red-200' : 'border-gray-200'
+            }`}
+            onDragOver={handleDragOver}
+            onDrop={(e) => handleDrop(e, status.id)}
+          >
+            {/* List header with colored top border */}
+            <div className="rounded-t-xl px-3 pt-0.5">
+              <div className="h-1 rounded-full mb-2" style={{ backgroundColor: barColor }} />
+            </div>
+            <div className={`flex shrink-0 items-center justify-between gap-2 px-3 pb-2.5 ${wipOver ? 'bg-red-50/50' : ''}`}>
+              <div className="flex min-w-0 flex-1 items-baseline gap-2">
+                <h3 className="truncate font-semibold text-sm text-[#173D68]">{status.name || status.label || 'Sans nom'}</h3>
+                <span className={`shrink-0 text-xs font-medium px-1.5 py-0.5 rounded-full ${
+                  wipOver ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500'
                 }`}>
-                  {itemsByStatus[status.id]?.length || 0}
-                  {wipLimits[status.id] ? `/${wipLimits[status.id]}` : ''}
+                  {count}{wipLimits[status.id] ? ` / ${wipLimits[status.id]}` : ''}
                 </span>
               </div>
-              <div className="relative">
+              <div className="relative shrink-0 group/list">
                 <button
-                  onClick={() => setEditingWip(editingWip === status.id ? null : status.id)}
-                  className="p-1 rounded hover:bg-surface-700 text-surface-500 hover:text-surface-300 transition-colors"
-                  title="Limite WIP"
+                  type="button"
+                  onClick={() => { setActiveListMenu(activeListMenu === status.id ? null : status.id); setActiveMenu(null); }}
+                  className="rounded-md p-1 text-gray-400 hover:text-[#173D68] hover:bg-gray-100 opacity-0 group-hover/list:opacity-100 transition-all"
                 >
-                  <Settings2 className="w-3.5 h-3.5" />
+                  <MoreHorizontal className="h-4 w-4" />
                 </button>
-                {editingWip === status.id && (
-                  <div className="absolute right-0 top-full mt-1 z-20 bg-surface-800 border border-surface-700 rounded-lg shadow-xl p-3 w-48">
-                    <label className="block text-xs text-surface-400 mb-1.5">Limite WIP</label>
-                    <div className="flex gap-2">
-                      <input
-                        type="number"
-                        min="0"
-                        placeholder="Aucune"
-                        defaultValue={wipLimits[status.id] || ''}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleSetWipLimit(status.id, e.target.value);
-                        }}
-                        className="input w-full text-sm"
-                        autoFocus
-                      />
-                      <button
-                        onClick={(e) => {
-                          const input = e.target.closest('.flex').querySelector('input');
-                          handleSetWipLimit(status.id, input.value);
-                        }}
-                        className="px-2 py-1 bg-primary-500 text-white rounded text-xs"
-                      >
-                        OK
-                      </button>
-                    </div>
-                    {wipLimits[status.id] && (
-                      <button
-                        onClick={() => handleSetWipLimit(status.id, 0)}
-                        className="text-xs text-red-400 hover:text-red-300 mt-2"
-                      >
-                        Supprimer la limite
-                      </button>
+                {activeListMenu === status.id && (
+                  <div className="absolute right-0 top-full z-30 mt-1 w-52 rounded-xl border border-gray-200 bg-white py-1 shadow-xl">
+                    <button type="button" onClick={() => setEditingWip(editingWip === status.id ? null : status.id)} className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">
+                      Limite WIP…
+                    </button>
+                    {editingWip === status.id && (
+                      <div className="border-t border-gray-100 px-3 py-2">
+                        <label className="mb-1 block text-xs text-gray-500">Limite WIP</label>
+                        <div className="flex gap-2">
+                          <input
+                            id={`wip-input-${status.id}`}
+                            type="number" min="0" placeholder="Aucune" defaultValue={wipLimits[status.id] || ''}
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleSetWipLimit(status.id, e.target.value); }}
+                            className="input w-full text-sm" autoFocus
+                          />
+                          <button
+                            type="button"
+                            onClick={() => { const input = document.getElementById(`wip-input-${status.id}`); if (input) handleSetWipLimit(status.id, input.value); }}
+                            className="shrink-0 rounded-lg px-2 py-1 text-xs font-medium text-white" style={{ backgroundColor: '#F36F21' }}
+                          >OK</button>
+                        </div>
+                        {wipLimits[status.id] ? (
+                          <button type="button" onClick={() => handleSetWipLimit(status.id, 0)} className="mt-2 text-xs text-red-500 hover:text-red-600">Supprimer la limite</button>
+                        ) : null}
+                      </div>
                     )}
                   </div>
                 )}
               </div>
             </div>
-          </div>
 
-          {/* Items */}
-          <div className="flex-1 p-2 space-y-2 overflow-y-auto min-h-[200px]">
-            <AnimatePresence>
-              {itemsByStatus[status.id]?.map((item) => (
-                <motion.div
-                  key={item.id}
-                  layout
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, item)}
-                  className={`group p-3 bg-surface-800 rounded-lg border border-surface-700 cursor-grab hover:border-surface-600 transition-colors ${
-                    draggedItem?.id === item.id ? 'opacity-50' : ''
-                  }`}
-                >
-                  <div className="flex items-start gap-2">
-                    <GripVertical className="w-4 h-4 text-surface-600 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <div className="flex-1 min-w-0">
-                      <p 
-                        className="font-medium text-surface-200 text-sm hover:text-primary-400 cursor-pointer transition-colors"
-                        onClick={() => setEditingItem(item)}
-                      >
-                        {item.name}
-                      </p>
-                      
-                      {/* Show other column values */}
-                      <div className="mt-2 space-y-1.5">
-                        {columns.filter(c => c.id !== statusColumn.id && c.type !== 'status').slice(0, 3).map(col => {
-                          const value = item.values?.[col.id];
-                          const formattedValue = formatColumnValue(col, value);
-                          if (!formattedValue) return null;
-                          return (
-                            <div key={col.id} className="text-xs">
-                              {formattedValue}
-                            </div>
-                          );
-                        })}
+            {/* Cards */}
+            <div className="flex-1 overflow-y-auto px-2 pb-2 space-y-2 min-h-[80px]">
+              <AnimatePresence>
+                {itemsByStatus[status.id]?.map((item) => {
+                  const due = getDueDateDisplay(item, status.id);
+                  const cc = commentCount(item);
+                  const ac = attachmentCount(item);
+                  const prioColor = getPriorityDotColor(item);
+                  const userIds = getPersonUserIds(item);
+
+                  return (
+                    <motion.div
+                      key={item.id}
+                      layout
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.96 }}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, item)}
+                      className={`group/card bg-white rounded-lg border border-gray-200 px-3 py-2.5 cursor-pointer hover:border-[#F36F21]/30 hover:shadow-md transition-all ${
+                        draggedItem?.id === item.id ? 'opacity-50' : ''
+                      }`}
+                    >
+                      {/* Status color bar */}
+                      <div className="mb-2 flex gap-1">
+                        <span className="h-1.5 min-w-[40px] flex-1 max-w-[56px] rounded-full" style={{ backgroundColor: barColor }} />
                       </div>
-                    </div>
-                    
-                    <div className="relative">
-                      <button
-                        onClick={() => setActiveMenu(activeMenu === item.id ? null : item.id)}
-                        className="p-1 rounded hover:bg-surface-700 text-surface-500 opacity-0 group-hover:opacity-100 transition-all"
-                      >
-                        <MoreHorizontal className="w-4 h-4" />
-                      </button>
-                      
-                      {activeMenu === item.id && (
-                        <div className="absolute right-0 top-6 z-10 bg-surface-800 border border-surface-700 rounded-lg shadow-lg py-1 min-w-[120px]">
+
+                      {/* Title + menu */}
+                      <div className="flex items-start justify-between gap-1">
+                        <p
+                          className="min-w-0 flex-1 font-semibold leading-snug text-[#173D68] text-sm"
+                          onClick={() => setEditingItem(item)}
+                          role="button" tabIndex={0}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEditingItem(item); } }}
+                        >
+                          {item.name}
+                        </p>
+                        <div className="relative shrink-0">
                           <button
-                            onClick={() => {
-                              setEditingItem(item);
-                              setActiveMenu(null);
-                            }}
-                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-surface-300 hover:bg-surface-700"
+                            type="button"
+                            onClick={() => { setActiveMenu(activeMenu === item.id ? null : item.id); setActiveListMenu(null); }}
+                            className="rounded-md p-0.5 text-gray-400 opacity-0 group-hover/card:opacity-100 hover:bg-gray-100 hover:text-[#173D68] transition-all"
                           >
-                            <Edit2 className="w-4 h-4" />
-                            Modifier
+                            <MoreHorizontal className="h-4 w-4" />
                           </button>
-                          <button
-                            onClick={() => handleDeleteItem(item.id)}
-                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-surface-700"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                            Supprimer
-                          </button>
+                          {activeMenu === item.id && (
+                            <div className="absolute right-0 top-6 z-20 min-w-[140px] rounded-xl border border-gray-200 bg-white py-1 shadow-xl">
+                              <button type="button" onClick={() => { setEditingItem(item); setActiveMenu(null); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                <Edit2 className="h-4 w-4" /> Modifier
+                              </button>
+                              <button type="button" onClick={() => handleDeleteItem(item.id)} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50">
+                                <Trash2 className="h-4 w-4" /> Supprimer
+                              </button>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
+                      </div>
 
-            {/* Drop zone indicator */}
-            {draggedItem && (
-              <div className="h-16 border-2 border-dashed border-primary-500/30 rounded-lg flex items-center justify-center">
-                <span className="text-sm text-primary-400">Déposer ici</span>
-              </div>
-            )}
-          </div>
+                      {/* Badges */}
+                      <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                        {due ? (
+                          <span className={`inline-flex items-center gap-0.5 text-[11px] font-medium px-1.5 py-0.5 rounded ${
+                            due.overdue ? 'bg-red-50 text-red-600' : 'bg-gray-100 text-gray-600'
+                          }`}>
+                            <Calendar className="h-3 w-3 shrink-0" />
+                            {due.text}
+                          </span>
+                        ) : null}
+                        {cc > 0 ? (
+                          <span className="inline-flex items-center gap-0.5 text-[11px] font-medium text-gray-500">
+                            <MessageSquare className="h-3 w-3 shrink-0" /> {cc}
+                          </span>
+                        ) : null}
+                        {ac > 0 ? (
+                          <span className="inline-flex items-center gap-0.5 text-[11px] font-medium text-gray-500">
+                            <Paperclip className="h-3 w-3 shrink-0" /> {ac}
+                          </span>
+                        ) : null}
+                        {prioColor ? (
+                          <span className="inline-flex items-center" title="Priorite">
+                            <span className="h-2.5 w-2.5 shrink-0 rounded-full ring-1 ring-black/5" style={{ backgroundColor: prioColor }} />
+                          </span>
+                        ) : null}
+                      </div>
 
-          {/* Add item */}
-          <div className="p-2 border-t border-surface-700/50">
-            {showNewItem[status.id] ? (
-              <div className="space-y-2">
-                <input
-                  type="text"
-                  placeholder="Nom de l'item..."
-                  value={newItemName[status.id] || ''}
-                  onChange={(e) => setNewItemName({ ...newItemName, [status.id]: e.target.value })}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleCreateItem(status.id);
-                    if (e.key === 'Escape') setShowNewItem({ ...showNewItem, [status.id]: false });
-                  }}
-                  autoFocus
-                  className="w-full px-3 py-2 bg-surface-700 border border-surface-600 rounded-lg text-sm text-surface-200 focus:outline-none focus:border-primary-500"
-                />
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleCreateItem(status.id)}
-                    className="flex-1 px-3 py-1.5 bg-primary-500 text-white rounded-lg text-sm font-medium hover:bg-primary-400"
-                  >
-                    Ajouter
-                  </button>
-                  <button
-                    onClick={() => setShowNewItem({ ...showNewItem, [status.id]: false })}
-                    className="px-3 py-1.5 text-surface-400 hover:text-surface-200 text-sm"
-                  >
-                    Annuler
-                  </button>
+                      {/* Avatars */}
+                      {userIds.length > 0 ? (
+                        <div className="mt-2.5 flex justify-end">
+                          <div className="flex -space-x-1.5">
+                            {userIds.slice(0, 4).map((uid) => {
+                              const name = getMemberName(uid) || '?';
+                              return (
+                                <div
+                                  key={uid}
+                                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-white text-[9px] font-bold text-white"
+                                  style={{ backgroundColor: avatarBg(uid) }}
+                                  title={name}
+                                >
+                                  {initialsFromName(name)}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ) : null}
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
+
+              {draggedItem ? (
+                <div className="flex h-10 items-center justify-center rounded-lg border-2 border-dashed border-[#F36F21]/40 bg-[#F36F21]/5">
+                  <span className="text-xs font-medium text-[#F36F21]">Deposer ici</span>
                 </div>
-              </div>
-            ) : (
-              <button
-                onClick={() => setShowNewItem({ ...showNewItem, [status.id]: true })}
-                className="w-full flex items-center justify-center gap-2 py-2 text-sm text-surface-500 hover:text-surface-300 hover:bg-surface-700/50 rounded-lg transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Ajouter un item
-              </button>
-            )}
-          </div>
-        </div>
-      ))}
+              ) : null}
+            </div>
 
-      {/* Edit Item Modal */}
-      <EditItemModal
-        isOpen={!!editingItem}
-        onClose={() => setEditingItem(null)}
-        item={editingItem}
-        workspaceId={currentBoard?.workspaceId}
-      />
+            {/* Add card */}
+            <div className="shrink-0 px-2 pb-2 pt-1">
+              {showNewItem[status.id] ? (
+                <div className="space-y-2 rounded-lg bg-gray-50 p-2 border border-gray-100">
+                  <input
+                    type="text"
+                    placeholder="Saisir un titre pour cette carte..."
+                    value={newItemName[status.id] || ''}
+                    onChange={(e) => setNewItemName({ ...newItemName, [status.id]: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleCreateItem(status.id);
+                      if (e.key === 'Escape') setShowNewItem({ ...showNewItem, [status.id]: false });
+                    }}
+                    autoFocus
+                    className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-sm text-gray-800 shadow-sm focus:border-[#F36F21] focus:outline-none focus:ring-1 focus:ring-[#F36F21]/30"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="button" onClick={() => handleCreateItem(status.id)}
+                      className="rounded-lg px-3 py-1.5 text-sm font-medium text-white" style={{ backgroundColor: '#F36F21' }}
+                    >Ajouter</button>
+                    <button
+                      type="button" onClick={() => setShowNewItem({ ...showNewItem, [status.id]: false })}
+                      className="px-2 py-1.5 text-sm text-gray-500 hover:text-gray-700"
+                    >Annuler</button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowNewItem({ ...showNewItem, [status.id]: true })}
+                  className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm font-medium text-gray-500 hover:text-[#F36F21] hover:bg-[#F36F21]/5 transition-colors"
+                >
+                  <Plus className="h-4 w-4" />
+                  Ajouter une carte
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })}
+
+      {/* Add list */}
+      <button
+        type="button"
+        className="flex h-fit min-h-[40px] w-[280px] shrink-0 items-center justify-start gap-2 rounded-xl border-2 border-dashed border-gray-300 px-3 py-3 text-left text-sm font-semibold text-gray-400 transition-colors hover:border-[#F36F21] hover:text-[#F36F21] hover:bg-[#F36F21]/5"
+        onClick={() => toast('Les listes correspondent aux valeurs de la colonne Statut. Modifiez les etiquettes dans les parametres du tableau.', { icon: 'ℹ️' })}
+      >
+        <Plus className="h-4 w-4 shrink-0" />
+        Ajouter une autre liste
+      </button>
+
+      <EditItemModal isOpen={!!editingItem} onClose={() => setEditingItem(null)} item={editingItem} workspaceId={currentBoard?.workspaceId} />
     </div>
   );
 }

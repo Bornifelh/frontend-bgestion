@@ -3,21 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, FolderKanban, FileText, ChevronRight } from 'lucide-react';
 import { boardApi, templateApi } from '../../lib/api';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
+import { PALETTE_COLORS } from '../../lib/utils';
 import toast from 'react-hot-toast';
 
 const icons = ['📋', '📊', '📈', '🎯', '🚀', '💡', '⚡', '🔥', '✨', '📝'];
-const colors = [
-  '#6366f1',
-  '#8b5cf6',
-  '#ec4899',
-  '#ef4444',
-  '#f97316',
-  '#eab308',
-  '#22c55e',
-  '#14b8a6',
-  '#06b6d4',
-  '#3b82f6',
-];
+const colors = PALETTE_COLORS;
 
 export default function CreateBoardModal({ isOpen, onClose, workspaceId }) {
   const addBoard = useWorkspaceStore((state) => state.addBoard);
@@ -113,23 +103,23 @@ export default function CreateBoardModal({ isOpen, onClose, workspaceId }) {
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-surface-700">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary-600/20 flex items-center justify-center">
-                <FolderKanban className="w-5 h-5 text-primary-400" />
+              <div className="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center">
+                <FolderKanban className="w-5 h-5 text-primary-600" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-surface-100">
+                <h2 className="text-lg font-semibold text-gray-900">
                   Créer un board
                 </h2>
-                <p className="text-sm text-surface-500">
+                <p className="text-sm text-gray-400">
                   {step === 'choose' ? 'Choisissez un point de départ' : 'Gérez vos tâches et projets'}
                 </p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="p-2 rounded-lg hover:bg-surface-700 text-surface-400"
+              className="p-2 rounded-lg hover:bg-gray-100 text-gray-500"
             >
               <X className="w-5 h-5" />
             </button>
@@ -140,36 +130,36 @@ export default function CreateBoardModal({ isOpen, onClose, workspaceId }) {
             <div className="p-6 space-y-4">
               <button
                 onClick={() => setStep('blank')}
-                className="w-full flex items-center gap-4 p-4 bg-surface-800/50 rounded-xl hover:bg-surface-800 transition-colors text-left"
+                className="w-full flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-50 transition-colors text-left"
               >
-                <div className="p-3 bg-primary-500/20 rounded-lg">
-                  <FolderKanban className="w-6 h-6 text-primary-400" />
+                <div className="p-3 bg-primary-50 rounded-lg">
+                  <FolderKanban className="w-6 h-6 text-primary-600" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-medium text-surface-200">Board vide</p>
-                  <p className="text-sm text-surface-500">Commencer de zéro</p>
+                  <p className="font-medium text-gray-700">Board vide</p>
+                  <p className="text-sm text-gray-400">Commencer de zéro</p>
                 </div>
-                <ChevronRight className="w-5 h-5 text-surface-500" />
+                <ChevronRight className="w-5 h-5 text-gray-400" />
               </button>
 
               {templates.length > 0 && (
                 <div>
-                  <p className="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-3">Depuis un template</p>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Depuis un template</p>
                   <div className="space-y-2">
                     {templates.map((tpl) => (
                       <button
                         key={tpl.id}
                         onClick={() => { setStep('template'); setFormData(prev => ({ ...prev, _templateId: tpl.id })); }}
-                        className="w-full flex items-center gap-4 p-4 bg-surface-800/50 rounded-xl hover:bg-surface-800 transition-colors text-left"
+                        className="w-full flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-50 transition-colors text-left"
                       >
                         <div className="p-3 bg-cyan-500/20 rounded-lg">
                           <FileText className="w-6 h-6 text-cyan-400" />
                         </div>
                         <div className="flex-1">
-                          <p className="font-medium text-surface-200">{tpl.name}</p>
-                          <p className="text-sm text-surface-500">{tpl.description || 'Template de board'}</p>
+                          <p className="font-medium text-gray-700">{tpl.name}</p>
+                          <p className="text-sm text-gray-400">{tpl.description || 'Template de board'}</p>
                         </div>
-                        <ChevronRight className="w-5 h-5 text-surface-500" />
+                        <ChevronRight className="w-5 h-5 text-gray-400" />
                       </button>
                     ))}
                   </div>
@@ -188,7 +178,7 @@ export default function CreateBoardModal({ isOpen, onClose, workspaceId }) {
           {step === 'template' && (
             <div className="p-6 space-y-6">
               <div>
-                <label className="block text-sm font-medium text-surface-300 mb-2">Nom du board</label>
+                <label className="block text-sm font-medium text-gray-600 mb-2">Nom du board</label>
                 <input
                   type="text"
                   value={formData.name}
@@ -199,7 +189,7 @@ export default function CreateBoardModal({ isOpen, onClose, workspaceId }) {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-surface-300 mb-2">Description <span className="text-surface-500">(optionnel)</span></label>
+                <label className="block text-sm font-medium text-gray-600 mb-2">Description <span className="text-gray-400">(optionnel)</span></label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -235,7 +225,7 @@ export default function CreateBoardModal({ isOpen, onClose, workspaceId }) {
               </div>
               <div className="flex-1 space-y-3">
                 <div>
-                  <label className="block text-xs font-medium text-surface-500 mb-2">
+                  <label className="block text-xs font-medium text-gray-400 mb-2">
                     Icône
                   </label>
                   <div className="flex gap-2 flex-wrap">
@@ -244,9 +234,9 @@ export default function CreateBoardModal({ isOpen, onClose, workspaceId }) {
                         key={icon}
                         type="button"
                         onClick={() => setFormData({ ...formData, icon })}
-                        className={`w-8 h-8 rounded-lg flex items-center justify-center text-lg hover:bg-surface-700 transition-colors ${
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center text-lg hover:bg-gray-100 transition-colors ${
                           formData.icon === icon
-                            ? 'bg-surface-700 ring-2 ring-primary-500'
+                            ? 'bg-gray-100 ring-2 ring-primary-500'
                             : ''
                         }`}
                       >
@@ -256,7 +246,7 @@ export default function CreateBoardModal({ isOpen, onClose, workspaceId }) {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-surface-500 mb-2">
+                  <label className="block text-xs font-medium text-gray-400 mb-2">
                     Couleur
                   </label>
                   <div className="flex gap-2">
@@ -267,7 +257,7 @@ export default function CreateBoardModal({ isOpen, onClose, workspaceId }) {
                         onClick={() => setFormData({ ...formData, color })}
                         className={`w-6 h-6 rounded-full transition-transform ${
                           formData.color === color
-                            ? 'ring-2 ring-offset-2 ring-offset-surface-900 ring-white scale-110'
+                            ? 'ring-2 ring-offset-2 ring-offset-white ring-white scale-110'
                             : 'hover:scale-110'
                         }`}
                         style={{ backgroundColor: color }}
@@ -280,7 +270,7 @@ export default function CreateBoardModal({ isOpen, onClose, workspaceId }) {
 
             {/* Name */}
             <div>
-              <label className="block text-sm font-medium text-surface-300 mb-2">
+              <label className="block text-sm font-medium text-gray-600 mb-2">
                 Nom du board
               </label>
               <input
@@ -298,9 +288,9 @@ export default function CreateBoardModal({ isOpen, onClose, workspaceId }) {
 
             {/* Description */}
             <div>
-              <label className="block text-sm font-medium text-surface-300 mb-2">
+              <label className="block text-sm font-medium text-gray-600 mb-2">
                 Description{' '}
-                <span className="text-surface-500">(optionnel)</span>
+                <span className="text-gray-400">(optionnel)</span>
               </label>
               <textarea
                 value={formData.description}

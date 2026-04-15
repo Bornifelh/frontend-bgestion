@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { useParams } from 'react-router-dom';
 import {
-  ArrowLeft, BarChart3, Users, Calendar, RefreshCw, AlertTriangle,
+  BarChart3, Users, Calendar, RefreshCw, AlertTriangle,
   CheckCircle, Clock, TrendingUp, Activity
 } from 'lucide-react';
 import { reportApi } from '../lib/api';
@@ -39,68 +38,56 @@ export default function Reports() {
 
   const tabs = [
     { id: 'workload', label: 'Charge de travail', icon: Users },
-    { id: 'deadlines', label: 'Respect des délais', icon: Calendar },
-    { id: 'activity', label: 'Activité', icon: Activity },
+    { id: 'deadlines', label: 'Respect des delais', icon: Calendar },
+    { id: 'activity', label: 'Activite', icon: Activity },
   ];
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <RefreshCw className="w-8 h-8 animate-spin text-primary-500" />
+        <div className="w-6 h-6 border-2 border-[#F36F21] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link to={`/workspace/${workspaceId}`} className="p-2 hover:bg-surface-700 rounded-lg transition-colors">
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-surface-100 flex items-center gap-3">
-              <BarChart3 className="w-7 h-7 text-primary-400" />
-              Rapports avancés
-            </h1>
-            <p className="text-surface-400 mt-1">Analyses détaillées de votre workspace</p>
-          </div>
+    <div className="space-y-6">
+      {/* Tabs */}
+      <div className="flex items-center gap-3">
+        <div className="flex gap-1 p-1 bg-gray-100 rounded-lg w-fit">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                activeTab === tab.id
+                  ? 'bg-white shadow-sm text-[#173D68]'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <tab.icon className="w-4 h-4" />
+              {tab.label}
+            </button>
+          ))}
         </div>
-        <button onClick={loadAll} className="btn-secondary flex items-center gap-2">
+        <button onClick={loadAll} className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
           <RefreshCw className="w-4 h-4" /> Actualiser
         </button>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex gap-1 p-1 bg-surface-800/50 rounded-xl w-fit">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              activeTab === tab.id ? 'bg-surface-700 text-surface-100' : 'text-surface-400 hover:text-surface-200'
-            }`}
-          >
-            <tab.icon className="w-4 h-4" />
-            {tab.label}
-          </button>
-        ))}
       </div>
 
       {/* Workload Tab */}
       {activeTab === 'workload' && (
         <div className="space-y-4">
-          <div className="card overflow-hidden">
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-surface-700">
-                  <th className="text-left p-4 text-surface-400 font-medium">Membre</th>
-                  <th className="text-center p-4 text-surface-400 font-medium">Tâches totales</th>
-                  <th className="text-center p-4 text-surface-400 font-medium">Terminées</th>
-                  <th className="text-center p-4 text-surface-400 font-medium">En retard</th>
-                  <th className="text-center p-4 text-surface-400 font-medium">Temps passé</th>
-                  <th className="text-left p-4 text-surface-400 font-medium">Progression</th>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="text-left p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Membre</th>
+                  <th className="text-center p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Taches totales</th>
+                  <th className="text-center p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Terminees</th>
+                  <th className="text-center p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">En retard</th>
+                  <th className="text-center p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Temps passe</th>
+                  <th className="text-left p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Progression</th>
                 </tr>
               </thead>
               <tbody>
@@ -109,29 +96,31 @@ export default function Reports() {
                   const hours = Math.floor(member.total_time_minutes / 60);
                   const minutes = Math.round(member.total_time_minutes % 60);
                   return (
-                    <tr key={member.id} className="border-b border-surface-800 hover:bg-surface-800/30">
+                    <tr key={member.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                       <td className="p-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-primary-500/20 flex items-center justify-center text-primary-400 text-xs font-semibold">
+                          <div className="w-8 h-8 rounded-full bg-[#173D68] flex items-center justify-center text-white text-xs font-semibold">
                             {member.first_name?.[0]}{member.last_name?.[0]}
                           </div>
-                          <span className="text-surface-200">{member.first_name} {member.last_name}</span>
+                          <span className="text-gray-800 font-medium">{member.first_name} {member.last_name}</span>
                         </div>
                       </td>
-                      <td className="text-center p-4 text-surface-300 font-medium">{member.total_tasks}</td>
-                      <td className="text-center p-4"><span className="text-green-400">{member.completed_tasks}</span></td>
-                      <td className="text-center p-4"><span className={member.overdue_tasks > 0 ? 'text-red-400 font-medium' : 'text-surface-500'}>{member.overdue_tasks}</span></td>
-                      <td className="text-center p-4 text-surface-400">{hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`}</td>
+                      <td className="text-center p-4 text-[#173D68] font-bold">{member.total_tasks}</td>
+                      <td className="text-center p-4"><span className="text-green-600 font-medium">{member.completed_tasks}</span></td>
+                      <td className="text-center p-4"><span className={member.overdue_tasks > 0 ? 'text-red-600 font-medium' : 'text-gray-400'}>{member.overdue_tasks}</span></td>
+                      <td className="text-center p-4 text-gray-500">{hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`}</td>
                       <td className="p-4">
                         <div className="flex items-center gap-2">
-                          <div className="flex-1 h-2 bg-surface-700 rounded-full overflow-hidden">
-                            <motion.div
-                              initial={{ width: 0 }}
-                              animate={{ width: `${progress}%` }}
-                              className={`h-full rounded-full ${progress >= 80 ? 'bg-green-500' : progress >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                          <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all duration-500"
+                              style={{
+                                width: `${progress}%`,
+                                backgroundColor: progress >= 80 ? '#22c55e' : progress >= 50 ? '#F36F21' : '#ef4444',
+                              }}
                             />
                           </div>
-                          <span className="text-xs text-surface-400 w-10 text-right">{progress}%</span>
+                          <span className="text-xs text-gray-500 w-10 text-right font-medium">{progress}%</span>
                         </div>
                       </td>
                     </tr>
@@ -140,7 +129,10 @@ export default function Reports() {
               </tbody>
             </table>
             {workload.length === 0 && (
-              <div className="p-8 text-center text-surface-500">Aucune donnée disponible</div>
+              <div className="p-12 text-center">
+                <Users className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-400">Aucune donnee disponible</p>
+              </div>
             )}
           </div>
         </div>
@@ -154,39 +146,48 @@ export default function Reports() {
               ? Math.round((board.on_time / board.total_with_deadline) * 100)
               : 100;
             return (
-              <motion.div key={board.board_id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="card p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-medium text-surface-200">{board.board_name}</h3>
-                  <span className={`text-sm font-medium ${complianceRate >= 80 ? 'text-green-400' : complianceRate >= 50 ? 'text-yellow-400' : 'text-red-400'}`}>
-                    {complianceRate}% à temps
+              <div key={board.board_id} className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-[#173D68]">{board.board_name}</h3>
+                  <span className={`text-sm font-bold px-3 py-1 rounded-full ${
+                    complianceRate >= 80 ? 'bg-green-50 text-green-600' :
+                    complianceRate >= 50 ? 'bg-orange-50 text-[#F36F21]' :
+                    'bg-red-50 text-red-600'
+                  }`}>
+                    {complianceRate}% a temps
                   </span>
                 </div>
                 <div className="grid grid-cols-3 gap-4">
-                  <div className="text-center p-3 bg-surface-800/50 rounded-lg">
-                    <p className="text-lg font-bold text-surface-200">{board.total_with_deadline}</p>
-                    <p className="text-xs text-surface-500">Avec échéance</p>
+                  <div className="text-center p-3 bg-[#173D68]/5 rounded-lg border border-[#173D68]/10">
+                    <p className="text-lg font-bold text-[#173D68]">{board.total_with_deadline}</p>
+                    <p className="text-xs text-gray-500">Avec echeance</p>
                   </div>
-                  <div className="text-center p-3 bg-green-500/10 rounded-lg">
-                    <p className="text-lg font-bold text-green-400">{board.on_time}</p>
-                    <p className="text-xs text-surface-500">À temps</p>
+                  <div className="text-center p-3 bg-green-50 rounded-lg border border-green-100">
+                    <p className="text-lg font-bold text-green-600">{board.on_time}</p>
+                    <p className="text-xs text-gray-500">A temps</p>
                   </div>
-                  <div className="text-center p-3 bg-red-500/10 rounded-lg">
-                    <p className="text-lg font-bold text-red-400">{board.overdue}</p>
-                    <p className="text-xs text-surface-500">En retard</p>
+                  <div className="text-center p-3 bg-red-50 rounded-lg border border-red-100">
+                    <p className="text-lg font-bold text-red-600">{board.overdue}</p>
+                    <p className="text-xs text-gray-500">En retard</p>
                   </div>
                 </div>
-                <div className="mt-3 h-2 bg-surface-700 rounded-full overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${complianceRate}%` }}
-                    className={`h-full rounded-full ${complianceRate >= 80 ? 'bg-green-500' : complianceRate >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                <div className="mt-3 h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${complianceRate}%`,
+                      backgroundColor: complianceRate >= 80 ? '#22c55e' : complianceRate >= 50 ? '#F36F21' : '#ef4444',
+                    }}
                   />
                 </div>
-              </motion.div>
+              </div>
             );
           })}
           {deadlines.length === 0 && (
-            <div className="card p-8 text-center text-surface-500">Aucune donnée sur les échéances</div>
+            <div className="bg-white border border-gray-200 rounded-xl p-12 text-center shadow-sm">
+              <Calendar className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-400">Aucune donnee sur les echeances</p>
+            </div>
           )}
         </div>
       )}
@@ -195,9 +196,12 @@ export default function Reports() {
       {activeTab === 'activity' && activitySummary && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* By User */}
-          <div className="card p-5">
-            <h3 className="text-sm font-medium text-surface-300 mb-4 flex items-center gap-2">
-              <Users className="w-4 h-4 text-primary-400" /> Activité par membre
+          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+            <h3 className="text-sm font-semibold text-[#173D68] mb-4 flex items-center gap-2">
+              <div className="w-6 h-6 rounded-md bg-[#173D68]/10 flex items-center justify-center">
+                <Users className="w-3.5 h-3.5 text-[#173D68]" />
+              </div>
+              Activite par membre
             </h3>
             <div className="space-y-3">
               {(activitySummary.byUser || []).map((u) => {
@@ -205,14 +209,16 @@ export default function Reports() {
                 return (
                   <div key={u.id}>
                     <div className="flex justify-between text-sm mb-1">
-                      <span className="text-surface-300">{u.first_name} {u.last_name}</span>
-                      <span className="text-surface-400">{u.count} actions</span>
+                      <span className="text-gray-700 font-medium">{u.first_name} {u.last_name}</span>
+                      <span className="text-gray-500">{u.count} actions</span>
                     </div>
-                    <div className="h-2 bg-surface-800 rounded-full overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${(u.count / maxCount) * 100}%` }}
-                        className="h-full bg-gradient-to-r from-primary-500 to-purple-500 rounded-full"
+                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{
+                          width: `${(u.count / maxCount) * 100}%`,
+                          background: 'linear-gradient(to right, #F36F21, #173D68)',
+                        }}
                       />
                     </div>
                   </div>
@@ -222,36 +228,43 @@ export default function Reports() {
           </div>
 
           {/* By Action */}
-          <div className="card p-5">
-            <h3 className="text-sm font-medium text-surface-300 mb-4 flex items-center gap-2">
-              <Activity className="w-4 h-4 text-cyan-400" /> Types d'actions
+          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+            <h3 className="text-sm font-semibold text-[#173D68] mb-4 flex items-center gap-2">
+              <div className="w-6 h-6 rounded-md bg-[#F36F21]/10 flex items-center justify-center">
+                <Activity className="w-3.5 h-3.5 text-[#F36F21]" />
+              </div>
+              Types d'actions
             </h3>
             <div className="space-y-2">
-              {(activitySummary.byAction || []).slice(0, 10).map((a, i) => (
-                <div key={a.action} className="flex items-center justify-between p-2 bg-surface-800/30 rounded-lg">
-                  <span className="text-sm text-surface-300">{getActionLabel(a.action)}</span>
-                  <span className="text-sm font-medium text-surface-400">{a.count}</span>
+              {(activitySummary.byAction || []).slice(0, 10).map((a) => (
+                <div key={a.action} className="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg border border-gray-100">
+                  <span className="text-sm text-gray-700">{getActionLabel(a.action)}</span>
+                  <span className="text-sm font-bold text-[#173D68] bg-[#173D68]/5 px-2 py-0.5 rounded">{a.count}</span>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Daily Activity Chart */}
-          <div className="card p-5 md:col-span-2">
-            <h3 className="text-sm font-medium text-surface-300 mb-4 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-green-400" /> Activité journalière (30 derniers jours)
+          <div className="bg-white border border-gray-200 rounded-xl p-5 md:col-span-2 shadow-sm">
+            <h3 className="text-sm font-semibold text-[#173D68] mb-4 flex items-center gap-2">
+              <div className="w-6 h-6 rounded-md bg-green-50 flex items-center justify-center">
+                <TrendingUp className="w-3.5 h-3.5 text-green-600" />
+              </div>
+              Activite journaliere (30 derniers jours)
             </h3>
             <div className="flex items-end gap-1 h-32">
               {(activitySummary.daily || []).reverse().map((d, i) => {
                 const maxCount = Math.max(...(activitySummary.daily.map(x => x.count) || [1]));
                 const height = (d.count / maxCount) * 100;
                 return (
-                  <div key={d.date} className="flex-1 flex flex-col items-center" title={`${d.date}: ${d.count} actions`}>
-                    <motion.div
-                      initial={{ height: 0 }}
-                      animate={{ height: `${Math.max(height, 3)}%` }}
-                      transition={{ delay: i * 0.02 }}
-                      className="w-full rounded-t bg-primary-500/60 hover:bg-primary-400 transition-colors"
+                  <div key={d.date} className="flex-1 flex flex-col items-center group" title={`${d.date}: ${d.count} actions`}>
+                    <div
+                      className="w-full rounded-t transition-colors hover:opacity-80"
+                      style={{
+                        height: `${Math.max(height, 3)}%`,
+                        backgroundColor: height > 70 ? '#F36F21' : height > 30 ? '#173D68' : '#C1C7D0',
+                      }}
                     />
                   </div>
                 );
@@ -266,15 +279,15 @@ export default function Reports() {
 
 function getActionLabel(action) {
   const labels = {
-    'item_created': 'Items créés',
-    'item_updated': 'Items modifiés',
-    'item_deleted': 'Items supprimés',
-    'value_updated': 'Valeurs modifiées',
-    'comment_added': 'Commentaires ajoutés',
-    'subtask_added': 'Sous-tâches ajoutées',
-    'subtask_completed': 'Sous-tâches terminées',
-    'board_created': 'Boards créés',
-    'column_created': 'Colonnes créées',
+    'item_created': 'Items crees',
+    'item_updated': 'Items modifies',
+    'item_deleted': 'Items supprimes',
+    'value_updated': 'Valeurs modifiees',
+    'comment_added': 'Commentaires ajoutes',
+    'subtask_added': 'Sous-taches ajoutees',
+    'subtask_completed': 'Sous-taches terminees',
+    'board_created': 'Boards crees',
+    'column_created': 'Colonnes creees',
   };
   return labels[action] || action;
 }

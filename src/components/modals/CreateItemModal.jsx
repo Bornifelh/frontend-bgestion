@@ -1,39 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Plus, Type, Hash, Calendar, User, CheckCircle, Flag, BarChart3, ChevronDown, ChevronUp, Search, Check, Upload, FileText, Loader2, Trash2 } from 'lucide-react';
+import { X, Plus, Type, ChevronDown, ChevronUp, Search, Check, Upload, FileText, Loader2, Trash2 } from 'lucide-react';
 import { itemApi, memberApi, fileApi } from '../../lib/api';
 import { useBoardStore } from '../../stores/boardStore';
+import { columnIcons, getAvatarColor, getInitials } from '../../lib/utils';
 import toast from 'react-hot-toast';
-
-const columnIcons = {
-  text: Type,
-  number: Hash,
-  date: Calendar,
-  person: User,
-  status: CheckCircle,
-  priority: Flag,
-  progress: BarChart3,
-  checkbox: CheckCircle,
-  files: FileText,
-  file: FileText,
-};
-
-// Helper for avatar colors
-const getAvatarColor = (user) => {
-  const colors = [
-    '#ef4444', '#f97316', '#eab308', '#22c55e', '#14b8a6',
-    '#3b82f6', '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e'
-  ];
-  const index = (user?.id || user?.email || '').toString().charCodeAt(0) % colors.length;
-  return colors[index];
-};
-
-const getInitials = (user) => {
-  if (user?.firstName && user?.lastName) {
-    return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
-  }
-  return user?.email?.[0]?.toUpperCase() || '?';
-};
 
 export default function CreateItemModal({ isOpen, onClose }) {
   const { currentBoard, groups, columns, addItem } = useBoardStore();
@@ -200,7 +171,7 @@ export default function CreateItemModal({ isOpen, onClose }) {
                 onClick={() => handleValueChange(column.id, label.id)}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                   value === label.id
-                    ? 'ring-2 ring-white/50 scale-105'
+                    ? 'ring-2 ring-offset-2 ring-primary-500 scale-105'
                     : 'opacity-70 hover:opacity-100'
                 }`}
                 style={{ backgroundColor: label.color, color: 'white' }}
@@ -227,7 +198,7 @@ export default function CreateItemModal({ isOpen, onClose }) {
                 onClick={() => handleValueChange(column.id, priority.id)}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                   value === priority.id
-                    ? 'ring-2 ring-white/50 scale-105'
+                    ? 'ring-2 ring-offset-2 ring-primary-500 scale-105'
                     : 'opacity-70 hover:opacity-100'
                 }`}
                 style={{ backgroundColor: priority.color, color: 'white' }}
@@ -249,12 +220,12 @@ export default function CreateItemModal({ isOpen, onClose }) {
               max="100"
               value={progressValue}
               onChange={(e) => handleValueChange(column.id, { progress: parseInt(e.target.value) })}
-              className="w-full h-2 bg-surface-700 rounded-lg appearance-none cursor-pointer accent-primary-500"
+              className="w-full h-2 bg-gray-100 rounded-lg appearance-none cursor-pointer accent-primary-500"
             />
             <div className="flex justify-between text-sm">
-              <span className="text-surface-500">0%</span>
-              <span className="text-primary-400 font-medium">{progressValue}%</span>
-              <span className="text-surface-500">100%</span>
+              <span className="text-gray-400">0%</span>
+              <span className="text-primary-600 font-medium">{progressValue}%</span>
+              <span className="text-gray-400">100%</span>
             </div>
           </div>
         );
@@ -266,9 +237,9 @@ export default function CreateItemModal({ isOpen, onClose }) {
               type="checkbox"
               checked={value || false}
               onChange={(e) => handleValueChange(column.id, e.target.checked)}
-              className="w-5 h-5 rounded border-surface-600 bg-surface-800 text-primary-500 focus:ring-primary-500"
+              className="w-5 h-5 rounded border-gray-200 bg-white text-primary-500 focus:ring-primary-500"
             />
-            <span className="text-surface-300">{value ? 'Oui' : 'Non'}</span>
+            <span className="text-gray-600">{value ? 'Oui' : 'Non'}</span>
           </label>
         );
 
@@ -299,7 +270,7 @@ export default function CreateItemModal({ isOpen, onClose }) {
                 {selectedUsers.map(user => (
                   <div
                     key={user.id}
-                    className="flex items-center gap-1.5 px-2 py-1 bg-surface-700 rounded-full text-xs"
+                    className="flex items-center gap-1.5 px-2 py-1 bg-gray-100 rounded-full text-xs"
                   >
                     <div
                       className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] text-white font-medium"
@@ -307,13 +278,13 @@ export default function CreateItemModal({ isOpen, onClose }) {
                     >
                       {getInitials(user)}
                     </div>
-                    <span className="text-surface-300">
+                    <span className="text-gray-600">
                       {user.firstName || user.email?.split('@')[0]}
                     </span>
                     <button
                       type="button"
                       onClick={() => toggleUser(user.id)}
-                      className="p-0.5 hover:bg-surface-600 rounded-full text-surface-500 hover:text-red-400"
+                      className="p-0.5 hover:bg-gray-200 rounded-full text-gray-400 hover:text-red-500"
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -327,7 +298,7 @@ export default function CreateItemModal({ isOpen, onClose }) {
               className="relative cursor-pointer"
               onClick={() => setOpenPersonDropdown(isDropdownOpen ? null : column.id)}
             >
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-500" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
                 placeholder="Rechercher un membre..."
@@ -341,13 +312,13 @@ export default function CreateItemModal({ isOpen, onClose }) {
                   e.stopPropagation();
                   if (!isDropdownOpen) setOpenPersonDropdown(column.id);
                 }}
-                className="w-full pl-9 pr-3 py-2 bg-surface-700 border-none rounded-lg text-sm text-surface-200 placeholder-surface-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                className="w-full pl-9 pr-3 py-2 bg-gray-100 border-none rounded-lg text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-500"
               />
             </div>
 
             {/* Dropdown */}
             {isDropdownOpen && (
-              <div className="absolute z-50 mt-1 w-full max-h-48 overflow-y-auto bg-surface-800 border border-surface-700 rounded-lg shadow-xl">
+              <div className="absolute z-50 mt-1 w-full max-h-48 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-xl">
                 {membersLoading ? (
                   <div className="p-3 text-center">
                     <Loader2 className="w-5 h-5 animate-spin mx-auto text-primary-500" />
@@ -360,8 +331,8 @@ export default function CreateItemModal({ isOpen, onClose }) {
                         key={member.id}
                         type="button"
                         onClick={() => toggleUser(member.id)}
-                        className={`w-full flex items-center gap-2 px-3 py-2 hover:bg-surface-700 transition-colors ${
-                          isSelected ? 'bg-primary-600/10' : ''
+                        className={`w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-100 transition-colors ${
+                          isSelected ? 'bg-primary-50' : ''
                         }`}
                       >
                         <div
@@ -371,16 +342,16 @@ export default function CreateItemModal({ isOpen, onClose }) {
                           {getInitials(member)}
                         </div>
                         <div className="flex-1 text-left">
-                          <p className="text-sm text-surface-200">
+                          <p className="text-sm text-gray-700">
                             {member.fullName || member.email}
                           </p>
                         </div>
-                        {isSelected && <Check className="w-4 h-4 text-primary-400" />}
+                        {isSelected && <Check className="w-4 h-4 text-primary-600" />}
                       </button>
                     );
                   })
                 ) : (
-                  <p className="p-3 text-sm text-surface-500 text-center">Aucun membre trouvé</p>
+                  <p className="p-3 text-sm text-gray-400 text-center">Aucun membre trouvé</p>
                 )}
               </div>
             )}
@@ -426,19 +397,19 @@ export default function CreateItemModal({ isOpen, onClose }) {
                 {columnFiles.map((file, index) => (
                   <div
                     key={index}
-                    className="flex items-center gap-2 px-3 py-2 bg-surface-700 rounded-lg"
+                    className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg"
                   >
-                    <FileText className="w-4 h-4 text-primary-400 flex-shrink-0" />
-                    <span className="flex-1 text-sm text-surface-200 truncate">
+                    <FileText className="w-4 h-4 text-primary-600 flex-shrink-0" />
+                    <span className="flex-1 text-sm text-gray-700 truncate">
                       {file.name}
                     </span>
-                    <span className="text-xs text-surface-500">
+                    <span className="text-xs text-gray-400">
                       {(file.size / 1024).toFixed(1)} KB
                     </span>
                     <button
                       type="button"
                       onClick={() => removeFile(index)}
-                      className="p-1 hover:bg-surface-600 rounded text-surface-400 hover:text-red-400"
+                      className="p-1 hover:bg-gray-200 rounded text-gray-500 hover:text-red-500"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -451,7 +422,7 @@ export default function CreateItemModal({ isOpen, onClose }) {
             <button
               type="button"
               onClick={() => fileInputRefs.current[column.id]?.click()}
-              className="flex items-center gap-2 px-3 py-2 w-full border-2 border-dashed border-surface-600 rounded-lg hover:border-primary-500 transition-colors text-surface-400 hover:text-primary-400"
+              className="flex items-center gap-2 px-3 py-2 w-full border-2 border-dashed border-gray-200 rounded-lg hover:border-primary-500 transition-colors text-gray-500 hover:text-primary-500"
             >
               <Upload className="w-4 h-4" />
               <span className="text-sm">Ajouter des fichiers</span>
@@ -492,18 +463,18 @@ export default function CreateItemModal({ isOpen, onClose }) {
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-surface-700">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary-600/20 flex items-center justify-center">
-                <Plus className="w-5 h-5 text-primary-400" />
+              <div className="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center">
+                <Plus className="w-5 h-5 text-primary-600" />
               </div>
-              <h2 className="text-lg font-semibold text-surface-100">
+              <h2 className="text-lg font-semibold text-gray-900">
                 Nouvel item
               </h2>
             </div>
             <button
               onClick={handleClose}
-              className="p-2 rounded-lg hover:bg-surface-700 text-surface-400"
+              className="p-2 rounded-lg hover:bg-gray-100 text-gray-500"
             >
               <X className="w-5 h-5" />
             </button>
@@ -513,7 +484,7 @@ export default function CreateItemModal({ isOpen, onClose }) {
           <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
             {/* Name */}
             <div>
-              <label className="block text-sm font-medium text-surface-300 mb-2">
+              <label className="block text-sm font-medium text-gray-600 mb-2">
                 Nom de l'item *
               </label>
               <input
@@ -532,7 +503,7 @@ export default function CreateItemModal({ isOpen, onClose }) {
             {/* Group */}
             {groups.length > 0 && (
               <div>
-                <label className="block text-sm font-medium text-surface-300 mb-2">
+                <label className="block text-sm font-medium text-gray-600 mb-2">
                   Groupe
                 </label>
                 <select
@@ -557,7 +528,7 @@ export default function CreateItemModal({ isOpen, onClose }) {
               <button
                 type="button"
                 onClick={() => setShowAdvanced(!showAdvanced)}
-                className="flex items-center gap-2 text-sm text-primary-400 hover:text-primary-300 transition-colors"
+                className="flex items-center gap-2 text-sm text-primary-600 hover:text-primary-500 transition-colors"
               >
                 {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 {showAdvanced ? 'Masquer les propriétés' : 'Définir les propriétés'}
@@ -573,13 +544,13 @@ export default function CreateItemModal({ isOpen, onClose }) {
                   exit={{ height: 0, opacity: 0 }}
                   className="overflow-hidden"
                 >
-                  <div className="space-y-4 pt-2 border-t border-surface-700">
+                  <div className="space-y-4 pt-2 border-t border-gray-200">
                     {columns.map((column) => {
                       const Icon = columnIcons[column.type] || Type;
                       return (
                         <div key={column.id} className="space-y-2">
-                          <label className="flex items-center gap-2 text-sm font-medium text-surface-300">
-                            <Icon className="w-4 h-4 text-surface-500" />
+                          <label className="flex items-center gap-2 text-sm font-medium text-gray-600">
+                            <Icon className="w-4 h-4 text-gray-400" />
                             {column.title}
                           </label>
                           {renderColumnInput(column)}
@@ -593,7 +564,7 @@ export default function CreateItemModal({ isOpen, onClose }) {
           </form>
 
           {/* Actions */}
-          <div className="flex items-center justify-end gap-3 p-6 border-t border-surface-700">
+          <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200">
             <button
               type="button"
               onClick={handleClose}
