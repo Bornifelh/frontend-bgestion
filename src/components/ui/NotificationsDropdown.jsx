@@ -53,13 +53,13 @@ export default function NotificationsDropdown({ onClose }) {
       initial={{ opacity: 0, y: -10, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -10, scale: 0.95 }}
-      className="notifications-dropdown absolute right-0 top-full mt-2 w-96 bg-surface-800 border border-surface-700 rounded-2xl shadow-2xl overflow-hidden z-50"
+      className="notifications-dropdown absolute right-0 top-full mt-2 w-96 bg-white border border-gray-200 rounded-2xl shadow-2xl overflow-hidden z-50"
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-surface-700">
+      <div className="flex items-center justify-between p-4 border-b border-gray-200">
         <div className="flex items-center gap-2">
-          <Bell className="w-5 h-5 text-primary-400" />
-          <span className="font-semibold text-surface-100">Notifications</span>
+          <Bell className="w-5 h-5 text-primary-600" />
+          <span className="font-semibold text-gray-900">Notifications</span>
           {unreadCount > 0 && (
             <span className="px-2 py-0.5 text-xs font-medium bg-primary-600 text-white rounded-full">
               {unreadCount}
@@ -69,7 +69,7 @@ export default function NotificationsDropdown({ onClose }) {
         {unreadCount > 0 && (
           <button
             onClick={() => markAllAsReadMutation.mutate()}
-            className="flex items-center gap-1 text-xs text-primary-400 hover:text-primary-300"
+            className="flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700"
           >
             <CheckCheck className="w-4 h-4" />
             Tout marquer comme lu
@@ -85,28 +85,28 @@ export default function NotificationsDropdown({ onClose }) {
           </div>
         ) : notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center">
-            <Bell className="w-10 h-10 text-surface-600 mb-3" />
-            <p className="text-sm text-surface-500">Aucune notification</p>
+            <Bell className="w-10 h-10 text-gray-300 mb-3" />
+            <p className="text-sm text-gray-500">Aucune notification</p>
           </div>
         ) : (
           notifications.map((notification) => (
             <div
               key={notification.id}
-              className={`p-4 border-b border-surface-700/50 hover:bg-surface-700/30 transition-colors ${
-                !notification.isRead ? 'bg-primary-600/5' : ''
+              className={`p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors ${
+                !notification.isRead ? 'bg-primary-50/50' : ''
               }`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-surface-200 mb-1">
+                  <p className="text-sm font-medium text-gray-900 mb-1">
                     {notification.title}
                   </p>
                   {notification.message && (
-                    <p className="text-xs text-surface-500 line-clamp-2">
+                    <p className="text-xs text-gray-500 line-clamp-2">
                       {notification.message}
                     </p>
                   )}
-                  <p className="text-xs text-surface-600 mt-1">
+                  <p className="text-xs text-gray-400 mt-1">
                     {formatDistanceToNow(new Date(notification.createdAt), {
                       addSuffix: true,
                       locale: fr,
@@ -116,7 +116,7 @@ export default function NotificationsDropdown({ onClose }) {
                 {!notification.isRead && (
                   <button
                     onClick={() => markAsReadMutation.mutate(notification.id)}
-                    className="p-1.5 rounded-lg hover:bg-surface-700 text-surface-500"
+                    className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400"
                   >
                     <Check className="w-4 h-4" />
                   </button>
@@ -129,8 +129,8 @@ export default function NotificationsDropdown({ onClose }) {
 
       {/* Footer */}
       {notifications.length > 0 && (
-        <div className="p-3 border-t border-surface-700">
-          <button className="w-full text-sm text-primary-400 hover:text-primary-300 font-medium">
+        <div className="p-3 border-t border-gray-200">
+          <button className="w-full text-sm text-primary-600 hover:text-primary-700 font-medium">
             Voir toutes les notifications
           </button>
         </div>

@@ -3,337 +3,252 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --color-primary: 0 85 204;
-    --color-surface: 22 30 46;
-  }
-  
   body {
-    @apply bg-surface-950 text-surface-100 antialiased;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    background-color: #F4F5F7;
+    color: #172B4D;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, sans-serif;
   }
 
   * {
-    @apply border-surface-700/50;
+    border-color: #DFE1E6;
   }
 
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
-
   ::-webkit-scrollbar-track {
-    @apply bg-transparent;
+    background: transparent;
   }
-
   ::-webkit-scrollbar-thumb {
-    @apply bg-surface-700 rounded-full;
+    background: #C1C7D0;
+    border-radius: 999px;
   }
-
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-surface-600;
+    background: #A5ADBA;
   }
 
   ::selection {
-    @apply bg-primary-600/40 text-white;
+    background: #E4F0F6;
+    color: #094C72;
   }
 }
 
 @layer components {
-  .btn,
-  .btn-primary,
-  .btn-secondary,
-  .btn-ghost,
-  .btn-danger,
-  .btn-success,
-  .btn-warning {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 
-           font-medium rounded-xl transition-all duration-200
-           focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface-900
-           disabled:opacity-50 disabled:cursor-not-allowed;
+  /* ─── Buttons ─── */
+  .btn {
+    @apply inline-flex items-center justify-center gap-1.5 px-3 py-1.5
+           font-medium rounded-sm transition-colors duration-75
+           focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed text-sm;
   }
-
   .btn-primary {
-    @apply bg-primary-600 text-white
-           hover:bg-primary-500
-           focus:ring-primary-500 shadow-lg shadow-primary-600/20
-           active:scale-[0.98];
+    background-color: #0079BF;
+    color: white;
   }
-
+  .btn-primary:hover {
+    background-color: #026AA7;
+  }
   .btn-secondary {
-    @apply bg-surface-800 text-surface-100 border border-surface-700
-           hover:bg-surface-700 hover:border-surface-600
-           focus:ring-surface-500 active:scale-[0.98];
+    @apply bg-gray-200 text-gray-800 hover:bg-gray-300;
   }
-
   .btn-ghost {
-    @apply bg-transparent text-surface-300
-           hover:bg-surface-800 hover:text-surface-100
-           focus:ring-surface-500 active:scale-[0.98];
+    @apply bg-transparent text-gray-600 hover:bg-black/5;
   }
-
   .btn-danger {
-    @apply bg-red-600 text-white
-           hover:bg-red-500
-           focus:ring-red-500 shadow-lg shadow-red-600/20
-           active:scale-[0.98];
+    background-color: #EB5A46;
+    color: white;
   }
-
+  .btn-danger:hover {
+    background-color: #CF513D;
+  }
   .btn-success {
-    @apply bg-emerald-600 text-white
-           hover:bg-emerald-500
-           focus:ring-emerald-500 shadow-lg shadow-emerald-600/20
-           active:scale-[0.98];
+    background-color: #61BD4F;
+    color: white;
   }
-
-  .btn-warning {
-    @apply bg-amber-600 text-white
-           hover:bg-amber-500
-           focus:ring-amber-500 shadow-lg shadow-amber-600/20
-           active:scale-[0.98];
+  .btn-success:hover {
+    background-color: #519839;
   }
-
   .btn-sm {
-    @apply px-3 py-1.5 text-sm rounded-lg;
+    @apply px-2 py-1 text-xs;
   }
-
   .btn-lg {
-    @apply px-6 py-3 text-lg rounded-2xl;
+    @apply px-4 py-2.5 text-base;
   }
 
-  .btn-icon {
-    @apply p-2.5 rounded-xl;
-  }
-
+  /* ─── Inputs ─── */
   .input {
-    @apply w-full px-4 py-3 bg-surface-800/50 border border-surface-700
-           rounded-xl text-surface-100 placeholder-surface-500
-           focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500
-           transition-all duration-200;
+    @apply w-full px-3 py-2 bg-white border-2 border-gray-200
+           rounded-sm text-gray-900 placeholder-gray-400 text-sm
+           focus:outline-none transition-colors duration-100;
+    &:focus {
+      border-color: #0079BF;
+    }
   }
 
+  /* ─── Cards ─── */
   .card {
-    @apply bg-surface-900/80 backdrop-blur-sm border border-surface-800
-           rounded-2xl p-6 shadow-xl;
+    @apply bg-white rounded-lg shadow-sm;
   }
 
-  .glass {
-    @apply bg-surface-900/60 backdrop-blur-xl border border-surface-700/50;
+  /* ─── Kanban List ─── */
+  .kanban-list {
+    background-color: #F1F2F4;
+    @apply rounded-xl w-[272px] flex-shrink-0 flex flex-col max-h-full;
+  }
+  .kanban-list-header {
+    @apply px-3 py-2.5 font-semibold text-sm text-gray-900;
+  }
+  .kanban-list-body {
+    @apply px-2 pb-2 overflow-y-auto flex-1 space-y-2;
+  }
+  .kanban-card {
+    @apply bg-white rounded-lg shadow-sm px-3 py-2 cursor-pointer
+           hover:bg-gray-50 border border-transparent
+           transition-all;
+  }
+  .kanban-card:hover {
+    border-color: rgba(0, 121, 191, 0.3);
   }
 
-  .gradient-text {
-    @apply bg-gradient-to-r from-primary-400 via-blue-400 to-cyan-400 
-           bg-clip-text text-transparent;
-  }
-
-  .gradient-border {
-    @apply relative;
-  }
-
-  .gradient-border::before {
-    content: '';
-    @apply absolute inset-0 rounded-2xl p-[1px]
-           bg-gradient-to-br from-primary-500/60 via-blue-500/40 to-cyan-500/30
-           -z-10;
-    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    mask-composite: xor;
-    -webkit-mask-composite: xor;
-  }
-
+  /* ─── Board Table ─── */
   .board-table {
     @apply w-full border-collapse;
   }
-
   .board-header {
-    @apply sticky top-0 z-20 bg-surface-900/95 backdrop-blur-sm;
+    @apply sticky top-0 z-20;
+    background-color: #F4F5F7;
   }
-
   .board-header-cell {
-    @apply px-3 py-3 text-left text-sm font-semibold text-surface-300
-           border-b border-surface-700 cursor-pointer
-           hover:bg-surface-800/50 transition-colors;
+    @apply px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider
+           border-b-2 border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors;
   }
-
   .board-row {
-    @apply border-b border-surface-800/50
-           hover:bg-surface-800/30 transition-colors;
+    @apply border-b border-gray-100 transition-colors;
   }
-
+  .board-row:hover {
+    background-color: rgba(0, 121, 191, 0.04);
+  }
   .board-cell {
-    @apply px-3 py-2.5 text-sm;
+    @apply px-3 py-2 text-sm text-gray-800;
   }
-
   .group-header {
-    @apply flex items-center gap-3 px-4 py-3 
-           bg-surface-800/50 border-b border-surface-700
-           cursor-pointer hover:bg-surface-800 transition-colors;
+    @apply flex items-center gap-3 px-4 py-2.5
+           bg-gray-50 border-b border-gray-200
+           cursor-pointer hover:bg-gray-100 transition-colors;
   }
 
+  /* ─── Badges ─── */
   .status-badge {
-    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium;
+    @apply inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-semibold;
   }
-
+  .trello-label {
+    @apply inline-block min-w-[40px] h-2 rounded-full;
+  }
   .priority-dot {
-    @apply w-2 h-2 rounded-full;
+    @apply w-2.5 h-2.5 rounded-full;
   }
 
+  /* ─── Avatars ─── */
   .avatar {
-    @apply w-8 h-8 rounded-full bg-gradient-to-br from-primary-500 to-blue-500
-           flex items-center justify-center text-xs font-semibold text-white;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background-color: #0079BF;
+    @apply flex items-center justify-center text-[10px] font-bold text-white;
   }
-
   .avatar-sm {
-    @apply w-6 h-6 text-[10px];
+    @apply w-6 h-6 text-[9px];
   }
-
   .avatar-lg {
-    @apply w-10 h-10 text-sm;
+    @apply w-9 h-9 text-xs;
   }
 
+  /* ─── Dropdowns ─── */
   .dropdown {
-    @apply absolute z-50 min-w-[180px] py-2 mt-1
-           bg-surface-800 border border-surface-700 rounded-xl
-           shadow-xl shadow-black/20 animate-scale-in origin-top-left;
+    @apply absolute z-50 min-w-[200px] py-2
+           bg-white rounded-lg border border-gray-200
+           shadow-xl animate-scale-in;
   }
-
   .dropdown-item {
-    @apply flex items-center gap-3 px-4 py-2.5 text-sm text-surface-300
-           hover:bg-surface-700 hover:text-surface-100 
-           cursor-pointer transition-colors;
+    @apply flex items-center gap-2 px-3 py-1.5 text-sm text-gray-800
+           hover:bg-gray-50 cursor-pointer transition-colors;
   }
 
+  /* ─── Modals ─── */
   .modal-overlay {
-    @apply fixed inset-0 z-50 bg-black/60 backdrop-blur-sm
-           flex items-center justify-center p-4;
+    @apply fixed inset-0 z-50 bg-black/50
+           flex items-start justify-center pt-12 px-4;
   }
-
   .modal-content {
-    @apply bg-surface-900 border border-surface-700 rounded-2xl
-           shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden
-           animate-scale-in;
+    background-color: #F4F5F7;
+    @apply rounded-lg shadow-2xl w-full max-w-2xl
+           max-h-[85vh] overflow-y-auto animate-slide-up;
   }
 
+  /* ─── Top Bar (Trello dark) ─── */
+  .topbar {
+    height: 48px;
+    background-color: #1D2125;
+    @apply flex items-center px-4 gap-4;
+  }
+  .topbar-btn {
+    @apply flex items-center gap-1.5 px-3 py-1.5 rounded-sm
+           transition-colors text-sm font-medium cursor-pointer;
+    color: rgba(255, 255, 255, 0.8);
+  }
+  .topbar-btn:hover {
+    color: white;
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+  .topbar-btn.active {
+    color: white;
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+
+  /* ─── Sidebar ─── */
   .sidebar {
-    @apply fixed left-0 top-0 h-screen w-64
-           bg-surface-900 border-r border-surface-800
-           flex flex-col z-40;
+    position: fixed;
+    left: 0;
+    top: 48px;
+    height: calc(100vh - 48px);
+    width: 260px;
+    background-color: #1D2125;
+    @apply flex flex-col z-30 transition-transform duration-200;
   }
-
   .sidebar-item {
-    @apply flex items-center gap-3 px-4 py-2.5 mx-2 rounded-xl
-           text-surface-400 hover:text-surface-100 hover:bg-surface-800
-           transition-all duration-200 cursor-pointer;
+    @apply flex items-center gap-2.5 px-4 py-1.5 mx-2 rounded-md
+           transition-colors cursor-pointer text-[13px];
+    color: rgba(255, 255, 255, 0.7);
   }
-
+  .sidebar-item:hover {
+    color: white;
+    background-color: rgba(255, 255, 255, 0.1);
+  }
   .sidebar-item.active {
-    @apply bg-primary-600/15 text-primary-400;
+    background-color: #0079BF;
+    color: white;
+  }
+  .sidebar-section-title {
+    @apply px-4 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wider;
+    color: rgba(255, 255, 255, 0.4);
   }
 
+  /* ─── Tooltips ─── */
   .tooltip {
-    @apply absolute z-50 px-3 py-1.5 text-xs font-medium
-           bg-surface-800 text-surface-200 rounded-lg
-           shadow-lg border border-surface-700
+    @apply absolute z-50 px-2 py-1 text-xs font-medium
+           bg-gray-900 text-white rounded shadow-lg
            pointer-events-none animate-fade-in;
   }
 }
 
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
-
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
-
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
-  }
-
-  .glow-primary {
-    box-shadow: 0 0 30px rgba(0, 85, 204, 0.4);
-  }
-
-  .glow-success {
-    box-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
-  }
-
-  .bg-gradient-radial {
-    background: radial-gradient(circle at 50% 0%, 
-      rgba(0, 85, 204, 0.1) 0%, 
-      transparent 50%);
-  }
-
-  .bg-grid {
-    background-image: 
-      linear-gradient(rgba(148, 163, 184, 0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(148, 163, 184, 0.03) 1px, transparent 1px);
-    background-size: 40px 40px;
-  }
-
-  .noise {
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-    opacity: 0.02;
-  }
-
-  @keyframes shimmer {
-    0% {
-      transform: translateX(-100%);
-    }
-    100% {
-      transform: translateX(100%);
-    }
-  }
-
-  .animate-shimmer {
-    animation: shimmer 2s infinite;
-  }
-
-  input[type="range"] {
-    -webkit-appearance: none;
-    appearance: none;
-    background: transparent;
-    cursor: pointer;
-  }
-
-  input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: white;
-    border: 2px solid rgb(var(--color-primary));
-    margin-top: -6px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-    transition: transform 0.15s ease;
-  }
-
-  input[type="range"]::-webkit-slider-thumb:hover {
-    transform: scale(1.1);
-  }
-
-  input[type="range"]::-moz-range-thumb {
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: white;
-    border: 2px solid rgb(var(--color-primary));
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-    cursor: pointer;
-  }
-
-  input[type="range"]::-webkit-slider-runnable-track {
-    height: 4px;
-    border-radius: 2px;
-  }
-
-  input[type="range"]::-moz-range-track {
-    height: 4px;
-    border-radius: 2px;
-    background: #374151;
   }
 }

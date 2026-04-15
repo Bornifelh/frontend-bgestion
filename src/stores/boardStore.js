@@ -11,6 +11,8 @@ export const useBoardStore = create((set, get) => ({
   filters: [],
   sorts: [],
   filter: { searchTerm: '', status: '', priority: '' },
+  isBoardFavorite: false,
+  isTransitioning: false,
 
   setBoard: (board) => {
     set({
@@ -20,7 +22,18 @@ export const useBoardStore = create((set, get) => ({
       items: board.items || [],
       views: board.views || [],
       selectedItems: [],
+      isBoardFavorite: false,
+      isTransitioning: false,
     });
+  },
+
+  setIsBoardFavorite: (isBoardFavorite) => set({ isBoardFavorite }),
+
+  prepareTransition: (newBoardId) => {
+    const { currentBoard } = get();
+    if (currentBoard && currentBoard.id !== newBoardId) {
+      set({ isTransitioning: true, selectedItems: [] });
+    }
   },
 
   clearBoard: () => {
@@ -31,6 +44,8 @@ export const useBoardStore = create((set, get) => ({
       items: [],
       views: [],
       selectedItems: [],
+      isBoardFavorite: false,
+      isTransitioning: false,
     });
   },
 

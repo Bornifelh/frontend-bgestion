@@ -1,20 +1,10 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Save, Trash2, Type, Hash, Calendar, User, CheckCircle, Flag, BarChart3, Plus, Users, FolderPlus } from 'lucide-react';
+import { X, Save, Trash2, Type, User, Plus, FolderPlus } from 'lucide-react';
 import { itemApi, memberApi, groupApi } from '../../lib/api';
 import { useBoardStore } from '../../stores/boardStore';
+import { columnIcons } from '../../lib/utils';
 import toast from 'react-hot-toast';
-
-const columnIcons = {
-  text: Type,
-  number: Hash,
-  date: Calendar,
-  person: User,
-  status: CheckCircle,
-  priority: Flag,
-  progress: BarChart3,
-  checkbox: CheckCircle,
-};
 
 export default function EditItemModal({ isOpen, onClose, item, workspaceId }) {
   const { columns, groups, updateItem, updateItemValue, deleteItem, currentBoard, addGroup } = useBoardStore();
@@ -196,7 +186,7 @@ export default function EditItemModal({ isOpen, onClose, item, workspaceId }) {
                 onClick={() => handleValueChange(column.id, label.id)}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                   value === label.id
-                    ? 'ring-2 ring-white/50 scale-105'
+                    ? 'ring-2 ring-offset-2 ring-primary-500 scale-105'
                     : 'opacity-70 hover:opacity-100'
                 }`}
                 style={{ backgroundColor: label.color, color: 'white' }}
@@ -223,7 +213,7 @@ export default function EditItemModal({ isOpen, onClose, item, workspaceId }) {
                 onClick={() => handleValueChange(column.id, priority.id)}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                   value === priority.id
-                    ? 'ring-2 ring-white/50 scale-105'
+                    ? 'ring-2 ring-offset-2 ring-primary-500 scale-105'
                     : 'opacity-70 hover:opacity-100'
                 }`}
                 style={{ backgroundColor: priority.color, color: 'white' }}
@@ -245,12 +235,12 @@ export default function EditItemModal({ isOpen, onClose, item, workspaceId }) {
               max="100"
               value={progressValue}
               onChange={(e) => handleValueChange(column.id, { progress: parseInt(e.target.value) })}
-              className="w-full h-2 bg-surface-700 rounded-lg appearance-none cursor-pointer accent-primary-500"
+              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary-500"
             />
             <div className="flex justify-between text-sm">
-              <span className="text-surface-500">0%</span>
-              <span className="text-primary-400 font-medium">{progressValue}%</span>
-              <span className="text-surface-500">100%</span>
+              <span className="text-gray-400">0%</span>
+              <span className="text-primary-600 font-medium">{progressValue}%</span>
+              <span className="text-gray-400">100%</span>
             </div>
           </div>
         );
@@ -262,9 +252,9 @@ export default function EditItemModal({ isOpen, onClose, item, workspaceId }) {
               type="checkbox"
               checked={value || false}
               onChange={(e) => handleValueChange(column.id, e.target.checked)}
-              className="w-5 h-5 rounded border-surface-600 bg-surface-800 text-primary-500 focus:ring-primary-500"
+              className="w-5 h-5 rounded border-gray-200 bg-white text-primary-500 focus:ring-primary-500"
             />
-            <span className="text-surface-300">{value ? 'Oui' : 'Non'}</span>
+            <span className="text-gray-600">{value ? 'Oui' : 'Non'}</span>
           </label>
         );
 
@@ -278,7 +268,7 @@ export default function EditItemModal({ isOpen, onClose, item, workspaceId }) {
                 {personIds.map((personId) => (
                   <span 
                     key={personId}
-                    className="inline-flex items-center gap-1 px-2 py-1 bg-primary-500/20 text-primary-400 rounded-lg text-sm"
+                    className="inline-flex items-center gap-1 px-2 py-1 bg-primary-50 text-primary-600 rounded-lg text-sm"
                   >
                     <User className="w-3 h-3" />
                     {getMemberName(personId)}
@@ -288,7 +278,7 @@ export default function EditItemModal({ isOpen, onClose, item, workspaceId }) {
                         const newIds = personIds.filter(id => id !== personId);
                         handleValueChange(column.id, newIds.length > 0 ? newIds : null);
                       }}
-                      className="ml-1 hover:text-red-400"
+                      className="ml-1 hover:text-red-500"
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -323,7 +313,7 @@ export default function EditItemModal({ isOpen, onClose, item, workspaceId }) {
         // Files type - show info
         const files = Array.isArray(value) ? value : [];
         return (
-          <div className="text-sm text-surface-400 italic">
+          <div className="text-sm text-gray-500 italic">
             {files.length > 0 
               ? `${files.length} fichier(s) attaché(s)`
               : 'Utilisez le tableau pour gérer les fichiers'
@@ -363,18 +353,18 @@ export default function EditItemModal({ isOpen, onClose, item, workspaceId }) {
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-surface-700">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary-600/20 flex items-center justify-center">
-                <Save className="w-5 h-5 text-primary-400" />
+              <div className="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center">
+                <Save className="w-5 h-5 text-primary-600" />
               </div>
-              <h2 className="text-lg font-semibold text-surface-100">
+              <h2 className="text-lg font-semibold text-gray-900">
                 Modifier l'item
               </h2>
             </div>
             <button
               onClick={onClose}
-              className="p-2 rounded-lg hover:bg-surface-700 text-surface-400"
+              className="p-2 rounded-lg hover:bg-gray-100 text-gray-500"
             >
               <X className="w-5 h-5" />
             </button>
@@ -384,7 +374,7 @@ export default function EditItemModal({ isOpen, onClose, item, workspaceId }) {
           <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
             {/* Name */}
             <div>
-              <label className="block text-sm font-medium text-surface-300 mb-2">
+              <label className="block text-sm font-medium text-gray-600 mb-2">
                 Nom de l'item *
               </label>
               <input
@@ -399,7 +389,7 @@ export default function EditItemModal({ isOpen, onClose, item, workspaceId }) {
 
             {/* Group */}
             <div>
-              <label className="block text-sm font-medium text-surface-300 mb-2">
+              <label className="block text-sm font-medium text-gray-600 mb-2">
                 Groupe
               </label>
               <div className="flex gap-2">
@@ -434,8 +424,8 @@ export default function EditItemModal({ isOpen, onClose, item, workspaceId }) {
                     exit={{ height: 0, opacity: 0 }}
                     className="overflow-hidden"
                   >
-                    <div className="mt-3 p-3 bg-surface-800/50 rounded-lg border border-surface-700 space-y-3">
-                      <p className="text-sm font-medium text-surface-300">Nouveau groupe</p>
+                    <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200 space-y-3">
+                      <p className="text-sm font-medium text-gray-600">Nouveau groupe</p>
                       <div className="flex gap-2">
                         <input
                           type="text"
@@ -481,7 +471,7 @@ export default function EditItemModal({ isOpen, onClose, item, workspaceId }) {
             {/* Columns */}
             {columns.length > 0 && (
               <div className="space-y-4">
-                <h3 className="text-sm font-medium text-surface-400 uppercase tracking-wider">
+                <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">
                   Propriétés
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -489,8 +479,8 @@ export default function EditItemModal({ isOpen, onClose, item, workspaceId }) {
                     const Icon = columnIcons[column.type] || Type;
                     return (
                       <div key={column.id} className="space-y-2">
-                        <label className="flex items-center gap-2 text-sm font-medium text-surface-300">
-                          <Icon className="w-4 h-4 text-surface-500" />
+                        <label className="flex items-center gap-2 text-sm font-medium text-gray-600">
+                          <Icon className="w-4 h-4 text-gray-400" />
                           {column.title}
                         </label>
                         {renderColumnInput(column)}
@@ -503,11 +493,11 @@ export default function EditItemModal({ isOpen, onClose, item, workspaceId }) {
           </form>
 
           {/* Actions */}
-          <div className="flex items-center justify-between p-6 border-t border-surface-700 bg-surface-800/50">
+          <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
             <button
               type="button"
               onClick={handleDelete}
-              className="btn btn-ghost text-red-400 hover:text-red-300 hover:bg-red-500/10"
+              className="btn btn-ghost text-red-500 hover:text-red-600 hover:bg-red-50"
             >
               <Trash2 className="w-4 h-4" />
               <span>Supprimer</span>

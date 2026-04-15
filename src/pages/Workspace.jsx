@@ -1,40 +1,33 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { motion } from 'framer-motion';
 import {
   Plus,
   MoreHorizontal,
-  Users,
-  Settings,
   Trash2,
-  ArrowRight,
-  FolderKanban,
+  ArrowUpRight,
+  LayoutGrid,
+  Users,
+  Calendar,
 } from 'lucide-react';
-import { workspaceApi, boardApi } from '../lib/api';
+import { boardApi } from '../lib/api';
 import { useWorkspaceStore } from '../stores/workspaceStore';
-import { joinWorkspace, leaveWorkspace } from '../lib/socket';
 import CreateBoardModal from '../components/modals/CreateBoardModal';
 import toast from 'react-hot-toast';
 
+const boardColors = [
+  '#F36F21', '#173D68', '#0079BF', '#61BD4F', '#EB5A46',
+  '#C377E0', '#00C2E0', '#FF9F1A', '#344563', '#519839',
+];
+
 export default function Workspace() {
-  const { workspaceId } = useParams();
+  const { workspace, workspaceId } = useOutletContext();
   const navigate = useNavigate();
-  const { setCurrentWorkspace, setBoards, boards } = useWorkspaceStore();
+  const { setBoards, boards } = useWorkspaceStore();
   const [showCreateBoard, setShowCreateBoard] = useState(false);
   const [activeMenu, setActiveMenu] = useState(null);
 
-  // Fetch workspace
-  const { data: workspace, isLoading: workspaceLoading } = useQuery({
-    queryKey: ['workspace', workspaceId],
-    queryFn: async () => {
-      const response = await workspaceApi.getOne(workspaceId);
-      return response.data;
-    },
-  });
-
-  // Fetch boards
-  const { data: boardsData, isLoading: boardsLoading } = useQuery({
+  const { data: boardsData, isLoading } = useQuery({
     queryKey: ['boards', workspaceId],
     queryFn: async () => {
       const response = await boardApi.getByWorkspace(workspaceId);
@@ -43,190 +36,191 @@ export default function Workspace() {
   });
 
   useEffect(() => {
-    if (workspace) {
-      setCurrentWorkspace(workspace);
-      joinWorkspace(workspaceId);
-    }
-    return () => {
-      leaveWorkspace(workspaceId);
-    };
-  }, [workspace, workspaceId, setCurrentWorkspace]);
-
-  useEffect(() => {
-    if (boardsData) {
-      setBoards(boardsData);
-    }
+    if (boardsData) setBoards(boardsData);
   }, [boardsData, setBoards]);
 
   const handleDeleteBoard = async (boardId, e) => {
     e.stopPropagation();
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce board ?')) return;
-
+    if (!confirm('Supprimer ce board ?')) return;
     try {
       await boardApi.delete(boardId);
-      toast.success('Board supprimé');
-    } catch (error) {
-      toast.error('Erreur lors de la suppression');
+      toast.success('Board supprime');
+    } catch {
+      toast.error('Erreur');
     }
     setActiveMenu(null);
   };
 
-  if (workspaceLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  if (!workspace) {
-    return (
-      <div className="text-center py-16">
-        <p className="text-surface-400">Workspace non trouvé</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="max-w-6xl mx-auto">
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
-      >
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-4">
-            <div
-              className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl"
-              style={{ backgroundColor: `${workspace.color}20` }}
-            >
-              {workspace.icon}
+    <div>
+      {/* Stats bar */}
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-[#F36F21]/10 flex items-center justify-center">
+              <LayoutGrid className="w-5 h-5 text-[#F36F21]" />
             </div>
             <div>
-              <h1 className="text-3xl font-display font-bold text-surface-100">
-                {workspace.name}
-              </h1>
-              <p className="text-surface-400">{workspace.description}</p>
+              <p className="text-2xl font-bold text-[#173D68]">{boards.length}</p>
+              <p className="text-xs text-gray-500">Boards</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button className="btn btn-secondary">
-              <Users className="w-4 h-4" />
-              <span>{workspace.memberCount} membres</span>
-            </button>
-            <button className="btn btn-ghost">
-              <Settings className="w-4 h-4" />
-            </button>
+        </div>
+        <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-[#173D68]/10 flex items-center justify-center">
+              <Users className="w-5 h-5 text-[#173D68]" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-[#173D68]">{workspace?.memberCount || 0}</p>
+              <p className="text-xs text-gray-500">Membres</p>
+            </div>
           </div>
         </div>
-      </motion.div>
+        <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
+              <Calendar className="w-5 h-5 text-green-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-[#173D68]">
+                {boards.reduce((sum, b) => sum + (b.itemCount || 0), 0)}
+              </p>
+              <p className="text-xs text-gray-500">Taches</p>
+            </div>
+          </div>
+        </div>
+      </div>
 
-      {/* Boards section */}
-      <div>
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-display font-semibold text-surface-100">
-            Boards
-          </h2>
+      {/* Section title */}
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-base font-semibold text-[#173D68]">Vos boards</h2>
+        <button
+          onClick={() => setShowCreateBoard(true)}
+          className="btn btn-sm text-white font-medium px-3 py-1.5 rounded-lg"
+          style={{ backgroundColor: '#F36F21' }}
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Nouveau board
+        </button>
+      </div>
+
+      {/* Board grid */}
+      {isLoading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-32 rounded-xl animate-pulse bg-gray-200" />
+          ))}
+        </div>
+      ) : boards.length === 0 ? (
+        <div className="bg-white rounded-xl border border-gray-200 text-center py-20">
+          <div className="w-16 h-16 rounded-2xl bg-[#F36F21]/10 flex items-center justify-center mx-auto mb-4">
+            <LayoutGrid className="w-8 h-8 text-[#F36F21]" />
+          </div>
+          <h3 className="text-lg font-semibold text-[#173D68] mb-2">
+            Aucun board
+          </h3>
+          <p className="text-sm text-gray-400 mb-5 max-w-sm mx-auto">
+            Creez votre premier board pour organiser vos taches et suivre vos projets.
+          </p>
           <button
             onClick={() => setShowCreateBoard(true)}
-            className="btn btn-primary"
+            className="btn text-white font-medium px-4 py-2 rounded-lg"
+            style={{ backgroundColor: '#F36F21' }}
           >
             <Plus className="w-4 h-4" />
-            <span>Nouveau board</span>
+            Creer un board
           </button>
         </div>
-
-        {boardsLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(3)].map((_, i) => (
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {boards.map((board, index) => {
+            const color = board.color || boardColors[index % boardColors.length];
+            return (
               <div
-                key={i}
-                className="card h-48 animate-pulse bg-surface-800/50"
-              />
-            ))}
-          </div>
-        ) : boards.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="card text-center py-16"
-          >
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500/20 to-purple-500/20 flex items-center justify-center mx-auto mb-6">
-              <FolderKanban className="w-8 h-8 text-primary-400" />
-            </div>
-            <h3 className="text-xl font-display font-semibold text-surface-100 mb-2">
-              Créez votre premier board
-            </h3>
-            <p className="text-surface-400 max-w-md mx-auto mb-6">
-              Les boards vous permettent d'organiser vos tâches et de suivre
-              l'avancement de vos projets.
-            </p>
-            <button
-              onClick={() => setShowCreateBoard(true)}
-              className="btn btn-primary"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Créer un board</span>
-            </button>
-          </motion.div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {boards.map((board, index) => (
-              <motion.div
                 key={board.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                className="card p-6 hover:border-primary-500/50 transition-all group cursor-pointer relative"
+                className="h-32 rounded-xl cursor-pointer relative group overflow-hidden shadow-sm hover:shadow-lg transition-all duration-200"
+                style={{
+                  background: `linear-gradient(135deg, ${color}, ${color}dd)`,
+                }}
                 onClick={() => navigate(`/board/${board.id}`)}
               >
-                <div className="flex items-start justify-between mb-4">
+                {/* Hover overlay */}
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200" />
+
+                {/* Decorative circles */}
+                <div
+                  className="absolute -top-6 -right-6 w-24 h-24 rounded-full opacity-20"
+                  style={{ backgroundColor: 'white' }}
+                />
+                <div
+                  className="absolute -bottom-4 -left-4 w-16 h-16 rounded-full opacity-10"
+                  style={{ backgroundColor: 'white' }}
+                />
+
+                {/* Content */}
+                <div className="relative p-4 h-full flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-white font-bold text-base leading-tight line-clamp-2">
+                      {board.icon && <span className="mr-1.5">{board.icon}</span>}
+                      {board.name}
+                    </h3>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-white/70 text-xs">
+                        {board.itemCount || 0} taches
+                      </span>
+                      <span className="text-white/50 text-xs">
+                        {board.groupCount || 0} groupes
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <ArrowUpRight className="w-4 h-4 text-white/50 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveMenu(activeMenu === board.id ? null : board.id);
+                        }}
+                        className="p-1 rounded text-white/50 opacity-0 group-hover:opacity-100 hover:text-white hover:bg-white/20 transition-all"
+                      >
+                        <MoreHorizontal className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {activeMenu === board.id && (
                   <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
-                    style={{ backgroundColor: `${board.color}20` }}
+                    className="absolute bottom-full right-2 mb-1 z-50 dropdown"
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    {board.icon}
-                  </div>
-                  <div className="relative">
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveMenu(activeMenu === board.id ? null : board.id);
-                      }}
-                      className="p-2 rounded-lg hover:bg-surface-700 text-surface-500 opacity-0 group-hover:opacity-100 transition-all"
+                      onClick={(e) => handleDeleteBoard(board.id, e)}
+                      className="dropdown-item text-red-500 hover:bg-red-50"
                     >
-                      <MoreHorizontal className="w-5 h-5" />
+                      <Trash2 className="w-4 h-4" />
+                      Supprimer
                     </button>
-                    {activeMenu === board.id && (
-                      <div className="dropdown right-0">
-                        <button
-                          onClick={(e) => handleDeleteBoard(board.id, e)}
-                          className="dropdown-item text-red-400 hover:text-red-300"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          <span>Supprimer</span>
-                        </button>
-                      </div>
-                    )}
                   </div>
-                </div>
-                <h3 className="font-semibold text-surface-100 mb-1 flex items-center gap-2">
-                  {board.name}
-                  <ArrowRight className="w-4 h-4 text-surface-500 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
-                </h3>
-                <p className="text-sm text-surface-500 mb-4 line-clamp-2">
-                  {board.description || 'Aucune description'}
-                </p>
-                <div className="flex items-center gap-4 text-xs text-surface-500">
-                  <span>{board.itemCount || 0} items</span>
-                  <span>{board.groupCount || 0} groupes</span>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        )}
-      </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Create new board */}
+          <button
+            onClick={() => setShowCreateBoard(true)}
+            className="h-32 rounded-xl border-2 border-dashed border-gray-300 
+                       flex flex-col items-center justify-center gap-2 text-gray-400
+                       hover:border-[#F36F21] hover:text-[#F36F21] hover:bg-[#F36F21]/5 
+                       transition-all duration-200"
+          >
+            <Plus className="w-6 h-6" />
+            <span className="text-sm font-medium">Nouveau board</span>
+          </button>
+        </div>
+      )}
 
       <CreateBoardModal
         isOpen={showCreateBoard}

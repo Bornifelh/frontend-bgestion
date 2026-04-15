@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  LayoutDashboard, ArrowLeft, Plus, Trash2, X, RefreshCw,
+  LayoutDashboard, Plus, Trash2, X, RefreshCw,
   BarChart3, Users, Clock, AlertTriangle, Activity, FolderKanban,
   CheckCircle, TrendingUp
 } from 'lucide-react';
@@ -83,16 +83,16 @@ export default function CustomDashboard() {
         return (
           <div className="grid grid-cols-3 gap-4">
             <div className="text-center">
-              <p className="text-3xl font-bold text-primary-400">{s.total_items || 0}</p>
-              <p className="text-xs text-surface-400 mt-1">Total</p>
+              <p className="text-3xl font-bold text-primary-600">{s.total_items || 0}</p>
+              <p className="text-xs text-gray-500 mt-1">Total</p>
             </div>
             <div className="text-center">
-              <p className="text-3xl font-bold text-yellow-400">{s.in_progress || 0}</p>
-              <p className="text-xs text-surface-400 mt-1">En cours</p>
+              <p className="text-3xl font-bold text-yellow-500">{s.in_progress || 0}</p>
+              <p className="text-xs text-gray-500 mt-1">En cours</p>
             </div>
             <div className="text-center">
-              <p className="text-3xl font-bold text-green-400">{s.completed || 0}</p>
-              <p className="text-xs text-surface-400 mt-1">Terminées</p>
+              <p className="text-3xl font-bold text-green-500">{s.completed || 0}</p>
+              <p className="text-xs text-gray-500 mt-1">Terminées</p>
             </div>
           </div>
         );
@@ -101,9 +101,9 @@ export default function CustomDashboard() {
         return (
           <div className="flex items-center justify-center">
             <div className="text-center">
-              <AlertTriangle className={`w-8 h-8 mx-auto mb-2 ${(dashData?.overdueCount || 0) > 0 ? 'text-red-400' : 'text-green-400'}`} />
-              <p className="text-4xl font-bold text-surface-100">{dashData?.overdueCount || 0}</p>
-              <p className="text-sm text-surface-400 mt-1">tâches en retard</p>
+              <AlertTriangle className={`w-8 h-8 mx-auto mb-2 ${(dashData?.overdueCount || 0) > 0 ? 'text-red-500' : 'text-green-500'}`} />
+              <p className="text-4xl font-bold text-gray-900">{dashData?.overdueCount || 0}</p>
+              <p className="text-sm text-gray-500 mt-1">tâches en retard</p>
             </div>
           </div>
         );
@@ -112,12 +112,12 @@ export default function CustomDashboard() {
           <div className="space-y-3">
             {(dashData?.byMember || []).slice(0, 6).map((m) => (
               <div key={m.id} className="flex items-center justify-between">
-                <span className="text-sm text-surface-300 truncate">{m.first_name} {m.last_name}</span>
-                <span className="text-sm font-medium text-primary-400">{m.task_count}</span>
+                <span className="text-sm text-gray-700 truncate">{m.first_name} {m.last_name}</span>
+                <span className="text-sm font-medium text-primary-600">{m.task_count}</span>
               </div>
             ))}
             {(!dashData?.byMember || dashData.byMember.length === 0) && (
-              <p className="text-center text-surface-500 text-sm">Aucune donnée</p>
+              <p className="text-center text-gray-400 text-sm">Aucune donnée</p>
             )}
           </div>
         );
@@ -126,14 +126,14 @@ export default function CustomDashboard() {
           <div className="space-y-2">
             {(dashData?.recentActivity || []).slice(0, 6).map((a) => (
               <div key={a.id} className="flex items-start gap-2">
-                <div className="w-6 h-6 rounded-full bg-surface-700 flex items-center justify-center text-[10px] text-surface-400 flex-shrink-0 mt-0.5">
+                <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-[10px] text-gray-500 flex-shrink-0 mt-0.5">
                   {a.first_name?.[0]}{a.last_name?.[0]}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs text-surface-300 truncate">
+                  <p className="text-xs text-gray-700 truncate">
                     <span className="font-medium">{a.first_name}</span> {a.action}
                   </p>
-                  <p className="text-[10px] text-surface-500">
+                  <p className="text-[10px] text-gray-400">
                     {formatDistanceToNow(new Date(a.created_at), { addSuffix: true, locale: fr })}
                   </p>
                 </div>
@@ -145,18 +145,18 @@ export default function CustomDashboard() {
         return (
           <div className="space-y-2">
             {(dashData?.boards || []).slice(0, 8).map((b) => (
-              <Link key={b.id} to={`/board/${b.id}`} className="flex items-center justify-between p-2 hover:bg-surface-800/50 rounded-lg transition-colors">
+              <Link key={b.id} to={`/board/${b.id}`} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg transition-colors">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded" style={{ backgroundColor: b.color || '#6366f1' }} />
-                  <span className="text-sm text-surface-200 truncate">{b.name}</span>
+                  <span className="text-sm text-gray-900 truncate">{b.name}</span>
                 </div>
-                <span className="text-xs text-surface-500">{b.item_count} items</span>
+                <span className="text-xs text-gray-500">{b.item_count} items</span>
               </Link>
             ))}
           </div>
         );
       default:
-        return <p className="text-surface-500 text-sm">Widget inconnu</p>;
+        return <p className="text-gray-400 text-sm">Widget inconnu</p>;
     }
   };
 
@@ -170,28 +170,14 @@ export default function CustomDashboard() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link to={`/workspace/${workspaceId}`} className="p-2 hover:bg-surface-700 rounded-lg transition-colors">
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-surface-100 flex items-center gap-3">
-              <LayoutDashboard className="w-7 h-7 text-primary-400" />
-              Tableau de bord personnalisé
-            </h1>
-            <p className="text-surface-400 mt-1">Configurez vos widgets pour un aperçu rapide</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <button onClick={loadAll} className="btn-secondary flex items-center gap-2">
-            <RefreshCw className="w-4 h-4" /> Actualiser
-          </button>
-          <button onClick={() => setShowAddWidget(true)} className="btn-primary flex items-center gap-2">
-            <Plus className="w-4 h-4" /> Ajouter un widget
-          </button>
-        </div>
+      {/* Actions */}
+      <div className="flex items-center justify-end gap-3">
+        <button onClick={loadAll} className="btn-secondary flex items-center gap-2">
+          <RefreshCw className="w-4 h-4" /> Actualiser
+        </button>
+        <button onClick={() => setShowAddWidget(true)} className="btn-primary flex items-center gap-2">
+          <Plus className="w-4 h-4" /> Ajouter un widget
+        </button>
       </div>
 
       {/* Add Widget Modal */}
@@ -201,7 +187,7 @@ export default function CustomDashboard() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
+            className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
             onClick={() => setShowAddWidget(false)}
           >
             <motion.div
@@ -209,12 +195,12 @@ export default function CustomDashboard() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-surface-900 rounded-2xl p-6 w-full max-w-md shadow-2xl"
+              className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl border border-gray-200"
             >
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-surface-100">Ajouter un widget</h2>
-                <button onClick={() => setShowAddWidget(false)} className="p-2 hover:bg-surface-700 rounded-lg">
-                  <X className="w-5 h-5 text-surface-400" />
+                <h2 className="text-lg font-semibold text-gray-900">Ajouter un widget</h2>
+                <button onClick={() => setShowAddWidget(false)} className="p-2 hover:bg-gray-100 rounded-lg">
+                  <X className="w-5 h-5 text-gray-500" />
                 </button>
               </div>
               <div className="space-y-2">
@@ -222,12 +208,12 @@ export default function CustomDashboard() {
                   <button
                     key={wt.id}
                     onClick={() => addWidget(wt.id)}
-                    className="w-full flex items-center gap-3 p-3 hover:bg-surface-800 rounded-xl transition-colors text-left"
+                    className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl transition-colors text-left"
                   >
-                    <div className="p-2 bg-primary-500/20 rounded-lg">
-                      <wt.icon className="w-5 h-5 text-primary-400" />
+                    <div className="p-2 bg-primary-50 rounded-lg">
+                      <wt.icon className="w-5 h-5 text-primary-600" />
                     </div>
-                    <span className="text-surface-200">{wt.label}</span>
+                    <span className="text-gray-900">{wt.label}</span>
                   </button>
                 ))}
               </div>
@@ -238,10 +224,10 @@ export default function CustomDashboard() {
 
       {/* Widgets Grid */}
       {widgets.length === 0 ? (
-        <div className="card p-12 text-center">
-          <LayoutDashboard className="w-16 h-16 text-surface-600 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-surface-300 mb-2">Dashboard vide</h3>
-          <p className="text-surface-500 mb-6">Ajoutez des widgets pour personnaliser votre tableau de bord.</p>
+        <div className="bg-white border border-gray-200 rounded-xl p-12 text-center">
+          <LayoutDashboard className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-gray-700 mb-2">Dashboard vide</h3>
+          <p className="text-gray-500 mb-6">Ajoutez des widgets pour personnaliser votre tableau de bord.</p>
           <button onClick={() => setShowAddWidget(true)} className="btn-primary">
             <Plus className="w-4 h-4" /> Ajouter un widget
           </button>
@@ -253,13 +239,13 @@ export default function CustomDashboard() {
               key={widget.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="card p-4 group relative"
+              className="bg-white border border-gray-200 rounded-xl p-4 group relative"
             >
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-medium text-surface-300">{widget.title || widget.widget_type}</h3>
+                <h3 className="text-sm font-medium text-gray-700">{widget.title || widget.widget_type}</h3>
                 <button
                   onClick={() => removeWidget(widget.id)}
-                  className="opacity-0 group-hover:opacity-100 p-1 text-surface-500 hover:text-red-400 transition-all"
+                  className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 transition-all"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>

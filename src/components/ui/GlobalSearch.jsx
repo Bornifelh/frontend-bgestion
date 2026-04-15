@@ -161,33 +161,33 @@ export default function GlobalSearch({ isOpen, onClose }) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/60 z-50 flex items-start justify-center pt-[10vh]"
+        className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center pt-[10vh]"
         onClick={onClose}
       >
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: -20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: -20 }}
-          className="bg-surface-900 rounded-2xl w-full max-w-2xl shadow-2xl border border-surface-700 overflow-hidden"
+          className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl border border-gray-200 overflow-hidden"
           onClick={e => e.stopPropagation()}
         >
           {/* Search input */}
-          <div className="flex items-center gap-3 px-5 py-4 border-b border-surface-700">
-            <Search className={`w-5 h-5 ${loading ? 'text-primary-400 animate-pulse' : 'text-surface-400'}`} />
+          <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-200">
+            <Search className={`w-5 h-5 ${loading ? 'text-primary-500 animate-pulse' : 'text-gray-400'}`} />
             <input
               ref={inputRef}
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Rechercher items, boards, membres..."
-              className="flex-1 bg-transparent border-none outline-none text-surface-100 placeholder-surface-500"
+              className="flex-1 bg-transparent border-none outline-none text-gray-900 placeholder-gray-400"
             />
             {query && (
-              <button onClick={() => setQuery('')} className="p-1 hover:bg-surface-700 rounded">
-                <X className="w-4 h-4 text-surface-400" />
+              <button onClick={() => setQuery('')} className="p-1 hover:bg-gray-100 rounded">
+                <X className="w-4 h-4 text-gray-400" />
               </button>
             )}
-            <kbd className="hidden sm:flex items-center gap-1 px-2 py-1 bg-surface-800 rounded text-xs text-surface-500">
+            <kbd className="hidden sm:flex items-center gap-1 px-2 py-1 bg-gray-100 rounded text-xs text-gray-500">
               <Command className="w-3 h-3" />K
             </kbd>
           </div>
@@ -204,7 +204,7 @@ export default function GlobalSearch({ isOpen, onClose }) {
             {/* Recent searches */}
             {showRecent && !loading && (
               <div className="p-3">
-                <p className="px-3 py-2 text-xs font-medium text-surface-500 uppercase tracking-wider">
+                <p className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Recherches récentes
                 </p>
                 {recentSearches.map((item, index) => {
@@ -213,14 +213,14 @@ export default function GlobalSearch({ isOpen, onClose }) {
                     <button
                       key={`recent-${item.id}`}
                       onClick={() => handleSelect(item)}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-surface-800 transition-colors text-left"
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-left"
                     >
-                      <div className="w-8 h-8 rounded-lg bg-surface-800 flex items-center justify-center">
-                        <Clock className="w-4 h-4 text-surface-500" />
+                      <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
+                        <Clock className="w-4 h-4 text-gray-400" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-surface-200 truncate">{item.name}</p>
-                        <p className="text-xs text-surface-500">{getTypeLabel(item.type)}</p>
+                        <p className="text-gray-900 truncate">{item.name}</p>
+                        <p className="text-xs text-gray-500">{getTypeLabel(item.type)}</p>
                       </div>
                     </button>
                   );
@@ -234,7 +234,7 @@ export default function GlobalSearch({ isOpen, onClose }) {
                 {/* Items */}
                 {results.items.length > 0 && (
                   <div className="mb-4">
-                    <p className="px-3 py-2 text-xs font-medium text-surface-500 uppercase tracking-wider">
+                    <p className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Items ({results.items.length})
                     </p>
                     {results.items.map((item, index) => (
@@ -253,7 +253,7 @@ export default function GlobalSearch({ isOpen, onClose }) {
                 {/* Boards */}
                 {results.boards.length > 0 && (
                   <div className="mb-4">
-                    <p className="px-3 py-2 text-xs font-medium text-surface-500 uppercase tracking-wider">
+                    <p className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Boards ({results.boards.length})
                     </p>
                     {results.boards.map((item, index) => (
@@ -273,7 +273,7 @@ export default function GlobalSearch({ isOpen, onClose }) {
                 {/* Workspaces */}
                 {results.workspaces.length > 0 && (
                   <div className="mb-4">
-                    <p className="px-3 py-2 text-xs font-medium text-surface-500 uppercase tracking-wider">
+                    <p className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Espaces de travail ({results.workspaces.length})
                     </p>
                     {results.workspaces.map((item, index) => (
@@ -292,7 +292,7 @@ export default function GlobalSearch({ isOpen, onClose }) {
                 {/* Members */}
                 {results.members.length > 0 && (
                   <div>
-                    <p className="px-3 py-2 text-xs font-medium text-surface-500 uppercase tracking-wider">
+                    <p className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Membres ({results.members.length})
                     </p>
                     {results.members.map((item, index) => (
@@ -313,9 +313,9 @@ export default function GlobalSearch({ isOpen, onClose }) {
             {/* No results */}
             {!hasResults && query.length >= 2 && !loading && (
               <div className="p-8 text-center">
-                <Search className="w-10 h-10 text-surface-600 mx-auto mb-3" />
-                <p className="text-surface-400">Aucun résultat pour "{query}"</p>
-                <p className="text-sm text-surface-500 mt-1">
+                <Search className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500">Aucun résultat pour "{query}"</p>
+                <p className="text-sm text-gray-400 mt-1">
                   Essayez avec d'autres termes
                 </p>
               </div>
@@ -324,9 +324,9 @@ export default function GlobalSearch({ isOpen, onClose }) {
             {/* Initial state */}
             {!hasResults && !showRecent && query.length < 2 && !loading && (
               <div className="p-8 text-center">
-                <Search className="w-10 h-10 text-surface-600 mx-auto mb-3" />
-                <p className="text-surface-400">Tapez pour rechercher</p>
-                <p className="text-sm text-surface-500 mt-1">
+                <Search className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500">Tapez pour rechercher</p>
+                <p className="text-sm text-gray-400 mt-1">
                   Minimum 2 caractères
                 </p>
               </div>
@@ -334,20 +334,20 @@ export default function GlobalSearch({ isOpen, onClose }) {
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between px-5 py-3 border-t border-surface-800 bg-surface-800/50 text-xs text-surface-500">
+          <div className="flex items-center justify-between px-5 py-3 border-t border-gray-200 bg-gray-50 text-xs text-gray-500">
             <div className="flex items-center gap-4">
               <span className="flex items-center gap-1">
-                <kbd className="px-1.5 py-0.5 bg-surface-700 rounded">↑</kbd>
-                <kbd className="px-1.5 py-0.5 bg-surface-700 rounded">↓</kbd>
+                <kbd className="px-1.5 py-0.5 bg-gray-200 rounded">↑</kbd>
+                <kbd className="px-1.5 py-0.5 bg-gray-200 rounded">↓</kbd>
                 naviguer
               </span>
               <span className="flex items-center gap-1">
-                <kbd className="px-1.5 py-0.5 bg-surface-700 rounded">↵</kbd>
+                <kbd className="px-1.5 py-0.5 bg-gray-200 rounded">↵</kbd>
                 sélectionner
               </span>
             </div>
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 bg-surface-700 rounded">esc</kbd>
+              <kbd className="px-1.5 py-0.5 bg-gray-200 rounded">esc</kbd>
               fermer
             </span>
           </div>
@@ -362,28 +362,28 @@ function SearchResultItem({ item, icon: Icon, subtitle, isSelected, onClick, ico
     <button
       onClick={onClick}
       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left group ${
-        isSelected ? 'bg-primary-500/20' : 'hover:bg-surface-800'
+        isSelected ? 'bg-primary-50' : 'hover:bg-gray-50'
       }`}
     >
       <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-        isSelected ? 'bg-primary-500/30' : 'bg-surface-800'
+        isSelected ? 'bg-primary-100' : 'bg-gray-100'
       }`}>
         {iconEmoji ? (
           <span className="text-lg">{iconEmoji}</span>
         ) : (
-          <Icon className={`w-4 h-4 ${isSelected ? 'text-primary-400' : 'text-surface-400'}`} />
+          <Icon className={`w-4 h-4 ${isSelected ? 'text-primary-600' : 'text-gray-400'}`} />
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <p className={`truncate ${isSelected ? 'text-primary-200' : 'text-surface-200'}`}>
+        <p className={`truncate ${isSelected ? 'text-primary-700' : 'text-gray-900'}`}>
           {item.name}
         </p>
         {subtitle && (
-          <p className="text-xs text-surface-500 truncate">{subtitle}</p>
+          <p className="text-xs text-gray-500 truncate">{subtitle}</p>
         )}
       </div>
       <ArrowRight className={`w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity ${
-        isSelected ? 'text-primary-400 opacity-100' : 'text-surface-500'
+        isSelected ? 'text-primary-600 opacity-100' : 'text-gray-400'
       }`} />
     </button>
   );

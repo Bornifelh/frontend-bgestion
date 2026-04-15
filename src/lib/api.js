@@ -125,6 +125,18 @@ export const userApi = {
   getProfile: () => api.get('/users/profile'),
   updateProfile: (data) => api.put('/users/profile', data),
   search: (params) => api.get('/users/search', { params }),
+  // Admin
+  adminGetAll: (params) => api.get('/users/admin/all', { params }),
+  adminCreate: (data) => api.post('/users/admin/create', data),
+  adminUpdate: (userId, data) => api.put(`/users/admin/${userId}`, data),
+  adminResetPassword: (userId) => api.post(`/users/admin/${userId}/reset-password`),
+  adminGetWorkspaces: () => api.get('/users/admin/workspaces'),
+  adminGetBoards: (wsId) => api.get(`/users/admin/workspaces/${wsId}/boards`),
+  adminGetAccess: (userId) => api.get(`/users/admin/${userId}/access`),
+  adminAddToWorkspace: (userId, wsId, data) => api.post(`/users/admin/${userId}/workspaces/${wsId}`, data),
+  adminRemoveFromWorkspace: (userId, wsId) => api.delete(`/users/admin/${userId}/workspaces/${wsId}`),
+  adminSetBoardPermission: (userId, boardId, data) => api.post(`/users/admin/${userId}/boards/${boardId}`, data),
+  adminRemoveBoardPermission: (userId, boardId) => api.delete(`/users/admin/${userId}/boards/${boardId}`),
 };
 
 export const notificationApi = {
@@ -163,6 +175,20 @@ export const memberApi = {
   transferOwnership: (workspaceId, data) => api.post(`/members/workspace/${workspaceId}/transfer-ownership`, data),
   // Team evaluation
   getEvaluation: (workspaceId) => api.get(`/members/workspace/${workspaceId}/evaluation`),
+};
+
+// IT Asset Management API
+export const itAssetApi = {
+  getAssets: (params) => api.get('/it/assets', { params }),
+  getAsset: (id) => api.get(`/it/assets/${id}`),
+  createAsset: (data) => api.post('/it/assets', data),
+  updateAsset: (id, data) => api.put(`/it/assets/${id}`, data),
+  deleteAsset: (id) => api.delete(`/it/assets/${id}`),
+  getMaintenance: (params) => api.get('/it/maintenance', { params }),
+  createMaintenance: (data) => api.post('/it/maintenance', data),
+  updateMaintenance: (id, data) => api.put(`/it/maintenance/${id}`, data),
+  deleteMaintenance: (id) => api.delete(`/it/maintenance/${id}`),
+  getStats: () => api.get('/it/stats'),
 };
 
 // SDSI (Schéma Directeur des Systèmes d'Information) API

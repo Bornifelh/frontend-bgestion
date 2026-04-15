@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, UserPlus, Users, Check } from 'lucide-react';
 import { memberApi, itemApi } from '../../../lib/api';
 import { useBoardStore } from '../../../stores/boardStore';
+import { getAvatarColor, getInitials } from '../../../lib/utils';
 import toast from 'react-hot-toast';
 
 // Cache for workspace members to persist across re-renders
@@ -152,21 +153,6 @@ export default function PersonCell({ item, column, value }) {
     }
   };
 
-  const getInitials = (user) => {
-    if (user.firstName && user.lastName) {
-      return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
-    }
-    return user.email?.[0]?.toUpperCase() || '?';
-  };
-
-  const getAvatarColor = (user) => {
-    const colors = [
-      '#ef4444', '#f97316', '#eab308', '#22c55e', '#14b8a6',
-      '#3b82f6', '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e'
-    ];
-    const index = (user.id || user.email || '').charCodeAt(0) % colors.length;
-    return colors[index];
-  };
 
   const menuContent = (
     <motion.div

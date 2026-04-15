@@ -52,23 +52,23 @@ export default function Register() {
   };
 
   return (
-    <div className="card gradient-border">
+    <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
       {/* Mobile logo */}
       <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
         <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center">
           <Sparkles className="w-6 h-6 text-white" />
         </div>
-        <span className="font-display font-bold text-2xl gradient-text">
-          GesProjet
+        <span className="font-display font-bold text-2xl text-gray-900">
+          Infratex
         </span>
       </div>
 
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-display font-bold text-surface-100 mb-2">
+        <h2 className="text-2xl font-display font-bold text-gray-900 mb-2">
           Créer un compte
         </h2>
-        <p className="text-surface-400">
-          Rejoignez GesProjet et boostez votre productivité
+        <p className="text-gray-500">
+          Rejoignez Infratex et boostez votre productivité
         </p>
       </div>
 
@@ -76,11 +76,11 @@ export default function Register() {
         {/* Name fields */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-surface-300 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Prénom
             </label>
             <div className="relative">
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-surface-500" />
+              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
                 value={formData.firstName}
@@ -94,7 +94,7 @@ export default function Register() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-surface-300 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Nom
             </label>
             <input
@@ -112,11 +112,11 @@ export default function Register() {
 
         {/* Email */}
         <div>
-          <label className="block text-sm font-medium text-surface-300 mb-2">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
             Adresse email
           </label>
           <div className="relative">
-            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-surface-500" />
+            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="email"
               value={formData.email}
@@ -132,11 +132,11 @@ export default function Register() {
 
         {/* Password */}
         <div>
-          <label className="block text-sm font-medium text-surface-300 mb-2">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
             Mot de passe
           </label>
           <div className="relative">
-            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-surface-500" />
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type={showPassword ? 'text' : 'password'}
               value={formData.password}
@@ -150,7 +150,7 @@ export default function Register() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-surface-500 hover:text-surface-300"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
             >
               {showPassword ? (
                 <EyeOff className="w-5 h-5" />
@@ -163,11 +163,11 @@ export default function Register() {
 
         {/* Confirm Password */}
         <div>
-          <label className="block text-sm font-medium text-surface-300 mb-2">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
             Confirmer le mot de passe
           </label>
           <div className="relative">
-            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-surface-500" />
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type={showPassword ? 'text' : 'password'}
               value={formData.confirmPassword}
@@ -200,11 +200,11 @@ export default function Register() {
       </form>
 
       {/* Login link */}
-      <p className="text-center text-surface-400 mt-6">
+      <p className="text-center text-gray-500 mt-6">
         Déjà un compte ?{' '}
         <Link
           to="/login"
-          className="text-primary-400 hover:text-primary-300 font-medium"
+          className="text-primary-600 hover:text-primary-700 font-medium"
         >
           Se connecter
         </Link>
