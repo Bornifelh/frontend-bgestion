@@ -3,11 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, Save, Trash2, MessageSquare, CheckSquare, Activity, Paperclip,
   Clock, User, Calendar, Send, MoreHorizontal, ChevronDown, ChevronRight,
-  Plus, GripVertical, Check, Edit2, Reply
+  Plus, GripVertical, Check, Edit2, Reply, Eye, EyeOff, Link2, Play, Square,
+  Timer, Search, ArrowRightLeft, AtSign
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { itemApi, commentApi, subtaskApi, activityApi } from '../../lib/api';
+import { itemApi, commentApi, subtaskApi, activityApi, timeEntryApi, watcherApi, dependencyApi, searchApi, memberApi } from '../../lib/api';
 import { useBoardStore } from '../../stores/boardStore';
 import { useAuthStore } from '../../stores/authStore';
 import toast from 'react-hot-toast';
@@ -34,6 +35,31 @@ export default function ItemDetailsModal({ isOpen, onClose, item }) {
   // Activity state
   const [activities, setActivities] = useState([]);
   const [loadingActivities, setLoadingActivities] = useState(false);
+  
+  // Time tracking state
+  const [timeEntries, setTimeEntries] = useState([]);
+  const [loadingTime, setLoadingTime] = useState(false);
+  const [activeTimer, setActiveTimer] = useState(null);
+  const [timerElapsed, setTimerElapsed] = useState(0);
+  const [timeDescription, setTimeDescription] = useState('');
+  
+  // Watchers state
+  const [isWatching, setIsWatching] = useState(false);
+  const [watcherCount, setWatcherCount] = useState(0);
+  
+  // Dependencies state
+  const [dependencies, setDependencies] = useState({ blocking: [], blockedBy: [], related: [] });
+  const [loadingDeps, setLoadingDeps] = useState(false);
+  const [depSearchTerm, setDepSearchTerm] = useState('');
+  const [depSearchResults, setDepSearchResults] = useState([]);
+  const [depType, setDepType] = useState('finish_to_start');
+  const [searchingDeps, setSearchingDeps] = useState(false);
+  
+  // @Mentions state
+  const [mentionSearch, setMentionSearch] = useState('');
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionResults, setMentionResults] = useState([]);
+  const [workspaceMembers, setWorkspaceMembers] = useState([]);
 
   useEffect(() => {
     if (item) {
@@ -44,8 +70,22 @@ export default function ItemDetailsModal({ isOpen, onClose, item }) {
       });
       loadComments();
       loadSubtasks();
+      loadWatcherStatus();
+      loadWorkspaceMembers();
     }
   }, [item]);
+  
+  // Timer interval
+  useEffect(() => {
+    let interval;
+    if (activeTimer) {
+      interval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - new Date(activeTimer.start_time).getTime()) / 1000);
+        setTimerElapsed(elapsed);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [activeTimer]);
 
   const loadComments = async () => {
     if (!item) return;
@@ -88,6 +128,181 @@ export default function ItemDetailsModal({ isOpen, onClose, item }) {
     } finally {
       setLoadingActivities(false);
     }
+  };
+  
+  const loadTimeEntries = async () => {
+    if (!item) return;
+    setLoadingTime(true);
+    try {
+      const [entriesRes, activeRes] = await Promise.all([
+        timeEntryApi.getByItem(item.id),
+        timeEntryApi.getActive(),
+      ]);
+      setTimeEntries(entriesRes.data);
+      if (activeRes.data && activeRes.data.item_id === item.id) {
+        setActiveTimer(activeRes.data);
+      }
+    } catch (error) {
+      console.error('Error loading time entries:', error);
+    } finally {
+      setLoadingTime(false);
+    }
+  };
+  
+  const loadWatcherStatus = async () => {
+    if (!item) return;
+    try {
+      const [watchingRes, watchersRes] = await Promise.all([
+        watcherApi.isWatching(item.id),
+        watcherApi.getWatchers(item.id),
+      ]);
+      setIsWatching(watchingRes.data.watching);
+      setWatcherCount(watchersRes.data.length);
+    } catch (error) {
+      console.error('Error loading watcher status:', error);
+    }
+  };
+  
+  const loadDependencies = async () => {
+    if (!item) return;
+    setLoadingDeps(true);
+    try {
+      const { data } = await dependencyApi.getByItem(item.id);
+      setDependencies(data);
+    } catch (error) {
+      console.error('Error loading dependencies:', error);
+    } finally {
+      setLoadingDeps(false);
+    }
+  };
+  
+  const loadWorkspaceMembers = async () => {
+    try {
+      const board = useBoardStore.getState().currentBoard;
+      if (board?.workspaceId) {
+        const { data } = await memberApi.getByWorkspace(board.workspaceId);
+        setWorkspaceMembers(data || []);
+      }
+    } catch (error) {
+      console.error('Error loading members:', error);
+    }
+  };
+  
+  const handleSearchDependency = async (term) => {
+    setDepSearchTerm(term);
+    if (term.length < 2) {
+      setDepSearchResults([]);
+      return;
+    }
+    setSearchingDeps(true);
+    try {
+      const { data } = await searchApi.quick({ q: term, type: 'items' });
+      setDepSearchResults((data || []).filter(r => r.id !== item.id).slice(0, 8));
+    } catch (error) {
+      console.error('Error searching:', error);
+    } finally {
+      setSearchingDeps(false);
+    }
+  };
+  
+  const handleCreateDependency = async (targetItemId) => {
+    try {
+      await dependencyApi.create({
+        itemId: item.id,
+        dependsOnId: targetItemId,
+        dependencyType: depType,
+      });
+      setDepSearchTerm('');
+      setDepSearchResults([]);
+      loadDependencies();
+      toast.success('Dépendance créée');
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Erreur lors de la création');
+    }
+  };
+  
+  const handleCommentInput = (e) => {
+    const value = e.target.value;
+    setNewComment(value);
+    
+    const cursorPos = e.target.selectionStart;
+    const textBeforeCursor = value.substring(0, cursorPos);
+    const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
+    
+    if (mentionMatch) {
+      const search = mentionMatch[1].toLowerCase();
+      setMentionSearch(search);
+      const filtered = workspaceMembers.filter(m => {
+        const name = `${m.firstName || ''} ${m.lastName || ''}`.toLowerCase();
+        return name.includes(search);
+      }).slice(0, 5);
+      setMentionResults(filtered);
+      setShowMentions(filtered.length > 0);
+    } else {
+      setShowMentions(false);
+    }
+  };
+  
+  const insertMention = (member) => {
+    const name = `${member.firstName} ${member.lastName}`;
+    const mentionRegex = /@\w*$/;
+    const newValue = newComment.replace(mentionRegex, `@${name} `);
+    setNewComment(newValue);
+    setShowMentions(false);
+  };
+
+  const handleToggleWatch = async () => {
+    try {
+      if (isWatching) {
+        await watcherApi.unwatch(item.id);
+        setIsWatching(false);
+        setWatcherCount(prev => prev - 1);
+      } else {
+        await watcherApi.watch(item.id);
+        setIsWatching(true);
+        setWatcherCount(prev => prev + 1);
+      }
+    } catch (error) {
+      toast.error('Erreur');
+    }
+  };
+  
+  const handleStartTimer = async () => {
+    try {
+      const { data } = await timeEntryApi.create({ itemId: item.id, description: timeDescription || null });
+      setActiveTimer(data);
+      setTimerElapsed(0);
+      setTimeDescription('');
+      toast.success('Chronomètre démarré');
+    } catch (error) {
+      toast.error('Erreur');
+    }
+  };
+  
+  const handleStopTimer = async () => {
+    try {
+      const { data } = await timeEntryApi.stop();
+      setActiveTimer(null);
+      setTimerElapsed(0);
+      setTimeEntries(prev => [data, ...prev]);
+      toast.success('Temps enregistré');
+    } catch (error) {
+      toast.error('Erreur');
+    }
+  };
+  
+  const formatDuration = (seconds) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+  
+  const formatMinutes = (minutes) => {
+    if (!minutes) return '0m';
+    const h = Math.floor(minutes / 60);
+    const m = Math.round(minutes % 60);
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
   };
 
   const handleSubmit = async () => {
@@ -204,6 +419,8 @@ export default function ItemDetailsModal({ isOpen, onClose, item }) {
     { id: 'details', label: 'Détails', icon: Edit2 },
     { id: 'subtasks', label: `Checklist (${subtaskProgress.completed}/${subtaskProgress.total})`, icon: CheckSquare },
     { id: 'comments', label: `Commentaires (${comments.length})`, icon: MessageSquare },
+    { id: 'time', label: 'Temps', icon: Timer },
+    { id: 'dependencies', label: 'Dépendances', icon: Link2 },
     { id: 'activity', label: 'Activité', icon: Activity },
   ];
 
@@ -246,9 +463,21 @@ export default function ItemDetailsModal({ isOpen, onClose, item }) {
                 </select>
               )}
             </div>
-            <button onClick={onClose} className="p-2 rounded-lg hover:bg-surface-700 text-surface-400">
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleToggleWatch}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                  isWatching ? 'bg-primary-500/20 text-primary-400' : 'hover:bg-surface-700 text-surface-400'
+                }`}
+                title={isWatching ? 'Ne plus observer' : 'Observer'}
+              >
+                {isWatching ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                {watcherCount > 0 && <span>{watcherCount}</span>}
+              </button>
+              <button onClick={onClose} className="p-2 rounded-lg hover:bg-surface-700 text-surface-400">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           {/* Tabs */}
@@ -259,6 +488,8 @@ export default function ItemDetailsModal({ isOpen, onClose, item }) {
                 onClick={() => {
                   setActiveTab(tab.id);
                   if (tab.id === 'activity') loadActivities();
+                  if (tab.id === 'time') loadTimeEntries();
+                  if (tab.id === 'dependencies') loadDependencies();
                 }}
                 className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === tab.id
@@ -377,14 +608,32 @@ export default function ItemDetailsModal({ isOpen, onClose, item }) {
                         </button>
                       </div>
                     )}
-                    <div className="flex gap-2">
-                      <textarea
-                        value={newComment}
-                        onChange={(e) => setNewComment(e.target.value)}
-                        placeholder="Ajouter un commentaire..."
-                        className="input flex-1 resize-none"
-                        rows={2}
-                      />
+                    <div className="relative flex gap-2">
+                      <div className="flex-1 relative">
+                        <textarea
+                          value={newComment}
+                          onChange={handleCommentInput}
+                          placeholder="Ajouter un commentaire... (utilisez @ pour mentionner)"
+                          className="input w-full resize-none"
+                          rows={2}
+                        />
+                        {showMentions && (
+                          <div className="absolute bottom-full mb-1 left-0 w-full bg-surface-800 border border-surface-700 rounded-lg shadow-xl z-20 max-h-40 overflow-y-auto">
+                            {mentionResults.map((m) => (
+                              <button
+                                key={m.id}
+                                onClick={() => insertMention(m)}
+                                className="w-full text-left px-3 py-2 hover:bg-surface-700 transition-colors flex items-center gap-2 text-sm"
+                              >
+                                <div className="w-6 h-6 rounded-full bg-primary-500/20 flex items-center justify-center text-primary-400 text-xs font-semibold">
+                                  {m.firstName?.[0]}{m.lastName?.[0]}
+                                </div>
+                                <span className="text-surface-200">{m.firstName} {m.lastName}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                       <button onClick={handleAddComment} disabled={!newComment.trim()} className="btn-primary self-end">
                         <Send className="w-4 h-4" />
                       </button>
@@ -405,6 +654,225 @@ export default function ItemDetailsModal({ isOpen, onClose, item }) {
 
                 {comments.length === 0 && !loadingComments && (
                   <p className="text-center text-surface-500 py-8">Aucun commentaire</p>
+                )}
+              </div>
+            )}
+
+            {/* Time Tracking Tab */}
+            {activeTab === 'time' && (
+              <div className="space-y-4">
+                {/* Timer control */}
+                <div className="bg-surface-800/50 rounded-xl p-4">
+                  {activeTimer ? (
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-3xl font-mono font-bold text-primary-400">{formatDuration(timerElapsed)}</p>
+                        <p className="text-sm text-surface-400 mt-1">Chronomètre en cours...</p>
+                      </div>
+                      <button onClick={handleStopTimer} className="flex items-center gap-2 px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors">
+                        <Square className="w-4 h-4" />
+                        Arrêter
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <input
+                        type="text"
+                        value={timeDescription}
+                        onChange={(e) => setTimeDescription(e.target.value)}
+                        placeholder="Description (optionnel)..."
+                        className="input"
+                      />
+                      <button onClick={handleStartTimer} className="flex items-center gap-2 px-4 py-2 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 transition-colors">
+                        <Play className="w-4 h-4" />
+                        Démarrer le chronomètre
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Time entries list */}
+                <div className="space-y-2">
+                  {timeEntries.map((entry) => (
+                    <div key={entry.id} className="flex items-center justify-between p-3 bg-surface-800/30 rounded-lg group">
+                      <div className="flex-1">
+                        <p className="text-sm text-surface-200">
+                          {entry.first_name} {entry.last_name}
+                        </p>
+                        {entry.description && (
+                          <p className="text-xs text-surface-500 mt-0.5">{entry.description}</p>
+                        )}
+                        <p className="text-xs text-surface-500 mt-0.5">
+                          {format(new Date(entry.start_time), 'dd/MM/yyyy HH:mm', { locale: fr })}
+                        </p>
+                      </div>
+                      <span className="text-sm font-medium text-primary-400">
+                        {formatMinutes(entry.duration_minutes || entry.current_duration)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {timeEntries.length === 0 && !loadingTime && (
+                  <p className="text-center text-surface-500 py-8">Aucune entrée de temps</p>
+                )}
+
+                {timeEntries.length > 0 && (
+                  <div className="bg-surface-800/50 rounded-lg p-3 flex items-center justify-between">
+                    <span className="text-sm text-surface-400">Total</span>
+                    <span className="font-semibold text-surface-200">
+                      {formatMinutes(timeEntries.reduce((sum, e) => sum + (e.duration_minutes || 0), 0))}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Dependencies Tab */}
+            {activeTab === 'dependencies' && (
+              <div className="space-y-4">
+                {/* Add dependency form */}
+                <div className="bg-surface-800/50 rounded-xl p-4 space-y-3">
+                  <h4 className="text-sm font-medium text-surface-200 flex items-center gap-2">
+                    <Plus className="w-4 h-4" /> Ajouter une dépendance
+                  </h4>
+                  <div className="flex gap-2">
+                    <select
+                      value={depType}
+                      onChange={(e) => setDepType(e.target.value)}
+                      className="input w-auto text-sm"
+                    >
+                      <option value="finish_to_start">est bloqué par</option>
+                      <option value="blocks">bloque</option>
+                      <option value="related_to">est lié à</option>
+                      <option value="duplicates">duplique</option>
+                      <option value="is_duplicated_by">est dupliqué par</option>
+                      <option value="causes">cause</option>
+                      <option value="is_caused_by">est causé par</option>
+                    </select>
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
+                      <input
+                        type="text"
+                        value={depSearchTerm}
+                        onChange={(e) => handleSearchDependency(e.target.value)}
+                        placeholder="Rechercher un item..."
+                        className="input pl-9 w-full text-sm"
+                      />
+                      {depSearchResults.length > 0 && (
+                        <div className="absolute z-20 w-full mt-1 bg-surface-800 border border-surface-700 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+                          {depSearchResults.map((result) => (
+                            <button
+                              key={result.id}
+                              onClick={() => handleCreateDependency(result.id)}
+                              className="w-full text-left px-3 py-2 hover:bg-surface-700 transition-colors flex items-center gap-2"
+                            >
+                              <Link2 className="w-3.5 h-3.5 text-surface-500" />
+                              <span className="text-sm text-surface-200 truncate">{result.name}</span>
+                              {result.board_name && (
+                                <span className="text-xs text-surface-500 ml-auto flex-shrink-0">({result.board_name})</span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {loadingDeps ? (
+                  <div className="flex justify-center py-8">
+                    <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+                  </div>
+                ) : (
+                  <>
+                    {dependencies.blocking?.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium text-surface-400 mb-2">Bloque</h4>
+                        {dependencies.blocking.map((dep) => (
+                          <div key={dep.id} className="flex items-center justify-between p-3 bg-surface-800/30 rounded-lg mb-2 group">
+                            <div className="flex items-center gap-2">
+                              <Link2 className="w-4 h-4 text-orange-400" />
+                              <span className="text-sm text-surface-200">{dep.item_name}</span>
+                              <span className="text-xs text-surface-500">({dep.board_name})</span>
+                            </div>
+                            <button
+                              onClick={async () => {
+                                await dependencyApi.delete(dep.id);
+                                loadDependencies();
+                                toast.success('Dépendance supprimée');
+                              }}
+                              className="opacity-0 group-hover:opacity-100 p-1 text-surface-500 hover:text-red-400"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {dependencies.blockedBy?.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium text-surface-400 mb-2">Bloqué par</h4>
+                        {dependencies.blockedBy.map((dep) => (
+                          <div key={dep.id} className="flex items-center justify-between p-3 bg-surface-800/30 rounded-lg mb-2 group">
+                            <div className="flex items-center gap-2">
+                              <Link2 className="w-4 h-4 text-red-400" />
+                              <span className="text-sm text-surface-200">{dep.item_name}</span>
+                              <span className="text-xs text-surface-500">({dep.board_name})</span>
+                            </div>
+                            <button
+                              onClick={async () => {
+                                await dependencyApi.delete(dep.id);
+                                loadDependencies();
+                                toast.success('Dépendance supprimée');
+                              }}
+                              className="opacity-0 group-hover:opacity-100 p-1 text-surface-500 hover:text-red-400"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Other dependency types (related, duplicates, causes, etc.) */}
+                    {Object.entries(dependencies)
+                      .filter(([key]) => !['blocking', 'blockedBy'].includes(key))
+                      .filter(([, deps]) => Array.isArray(deps) && deps.length > 0)
+                      .map(([type, deps]) => (
+                        <div key={type}>
+                          <h4 className="text-sm font-medium text-surface-400 mb-2">{getDepTypeLabel(type)}</h4>
+                          {deps.map((dep) => (
+                            <div key={dep.id} className="flex items-center justify-between p-3 bg-surface-800/30 rounded-lg mb-2 group">
+                              <div className="flex items-center gap-2">
+                                <ArrowRightLeft className="w-4 h-4 text-blue-400" />
+                                <span className="text-sm text-surface-200">{dep.item_name}</span>
+                                <span className="text-xs text-surface-500">({dep.board_name})</span>
+                                {dep.dependency_type && (
+                                  <span className="text-xs text-surface-600 italic">{dep.dependency_type}</span>
+                                )}
+                              </div>
+                              <button
+                                onClick={async () => {
+                                  await dependencyApi.delete(dep.id);
+                                  loadDependencies();
+                                  toast.success('Dépendance supprimée');
+                                }}
+                                className="opacity-0 group-hover:opacity-100 p-1 text-surface-500 hover:text-red-400"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+
+                    {(dependencies.blocking?.length || 0) === 0 && (dependencies.blockedBy?.length || 0) === 0 && 
+                     Object.entries(dependencies).filter(([key]) => !['blocking', 'blockedBy'].includes(key)).every(([, deps]) => !Array.isArray(deps) || deps.length === 0) && (
+                      <p className="text-center text-surface-500 py-4">Aucune dépendance</p>
+                    )}
+                  </>
                 )}
               </div>
             )}
@@ -653,6 +1121,18 @@ function renderColumnInput(column, formData, setFormData) {
         />
       );
   }
+}
+
+function getDepTypeLabel(type) {
+  const labels = {
+    related: 'Lié à',
+    duplicates: 'Duplique',
+    is_duplicated_by: 'Est dupliqué par',
+    causes: 'Cause',
+    is_caused_by: 'Est causé par',
+    related_to: 'Lié à',
+  };
+  return labels[type] || type;
 }
 
 function getActivityText(action) {

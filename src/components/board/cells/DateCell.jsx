@@ -30,6 +30,32 @@ import { itemApi } from '../../../lib/api';
 import { useBoardStore } from '../../../stores/boardStore';
 import toast from 'react-hot-toast';
 
+// Helper to check if item is completed (100% progress or done/completed status)
+const isItemCompleted = (item, columns) => {
+  if (!item?.values || !columns) return false;
+  
+  for (const column of columns) {
+    const value = item.values[column.id];
+    
+    // Check progress column - if progress is 100%, item is complete
+    if (column.type === 'progress') {
+      const progress = typeof value === 'object' ? value?.progress : value;
+      if (progress >= 100) return true;
+    }
+    
+    // Check status column - if status is 'done' or 'completed', item is complete
+    if (column.type === 'status' && value) {
+      const statusLabel = column.labels?.find(l => l.id === value);
+      const statusName = statusLabel?.name?.toLowerCase() || '';
+      if (statusName === 'done' || statusName === 'completed' || statusName === 'terminé' || statusName === 'terminée') {
+        return true;
+      }
+    }
+  }
+  
+  return false;
+};
+
 const WEEKDAYS = ['Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa', 'Di'];
 
 const QUICK_OPTIONS = [
@@ -61,6 +87,10 @@ export default function DateCell({ item, column, value }) {
   const buttonRef = useRef(null);
   const menuRef = useRef(null);
   const updateItemValue = useBoardStore((state) => state.updateItemValue);
+  const columns = useBoardStore((state) => state.columns);
+  
+  // Check if the item is completed (100% progress or done status)
+  const itemCompleted = useMemo(() => isItemCompleted(item, columns), [item, columns]);
 
   // Handle both value formats: direct string or object with date property
   const rawDate = typeof value === 'object' ? value?.date : value;
@@ -180,6 +210,10 @@ export default function DateCell({ item, column, value }) {
     
     if (isToday(dateValue)) return { label: "Aujourd'hui", color: '#3b82f6' };
     if (isPast(dateValue)) {
+      // Don't show "late" status if item is completed (100% progress or done status)
+      if (itemCompleted) {
+        return { label: 'Terminé', color: '#22c55e', isLate: false };
+      }
       const days = differenceInDays(today, dateValue);
       return { label: `${days}j en retard`, color: '#ef4444', isLate: true };
     }

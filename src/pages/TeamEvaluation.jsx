@@ -411,7 +411,10 @@ export default function TeamEvaluation() {
     );
   }
 
-  const { teamMetrics, members } = data || { teamMetrics: {}, members: [] };
+  const { teamMetrics, members: allMembers } = data || { teamMetrics: {}, members: [] };
+  
+  // Filter to only show members who have assigned tasks
+  const members = allMembers.filter(member => member.metrics?.totalTasks > 0);
 
   return (
     <div className="p-6 space-y-6">
@@ -471,8 +474,8 @@ export default function TeamEvaluation() {
               <Users className="w-6 h-6 text-blue-400" />
             </div>
             <div>
-              <p className="text-sm text-surface-400">Membres</p>
-              <p className="text-2xl font-bold text-surface-100">{teamMetrics.totalMembers}</p>
+              <p className="text-sm text-surface-400">Membres avec tâches</p>
+              <p className="text-2xl font-bold text-surface-100">{members.length}</p>
             </div>
           </div>
         </motion.div>
@@ -652,6 +655,11 @@ export default function TeamEvaluation() {
           <h2 className="text-lg font-semibold text-surface-200 flex items-center gap-2">
             <PieChart className="w-5 h-5 text-primary-400" />
             Classement des membres
+            {members.length > 0 && (
+              <span className="text-sm font-normal text-surface-500">
+                ({members.length} avec des tâches assignées)
+              </span>
+            )}
           </h2>
           <span className="text-sm text-surface-500">
             Trié par performance décroissante
@@ -661,8 +669,13 @@ export default function TeamEvaluation() {
         {members.length === 0 ? (
           <div className="card p-8 text-center">
             <Users className="w-12 h-12 text-surface-600 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-surface-300 mb-2">Aucun membre</h3>
-            <p className="text-surface-500">Il n'y a pas encore de membres dans cet espace de travail.</p>
+            <h3 className="text-lg font-semibold text-surface-300 mb-2">Aucun membre avec des tâches</h3>
+            <p className="text-surface-500">
+              {allMembers.length > 0 
+                ? `${allMembers.length} membre(s) dans cet espace, mais aucun n'a de tâche assignée.`
+                : "Il n'y a pas encore de membres dans cet espace de travail."
+              }
+            </p>
           </div>
         ) : (
           <div className="space-y-3">

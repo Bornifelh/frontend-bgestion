@@ -40,9 +40,16 @@ export const useWorkspaceStore = create((set) => ({
   setBoards: (boards) => set({ boards }),
 
   addBoard: (board) => {
-    set((state) => ({
-      boards: [...state.boards, board],
-    }));
+    set((state) => {
+      // Prevent duplicates by checking if board already exists
+      const exists = state.boards.some((b) => b.id === board.id);
+      if (exists) {
+        return state; // Don't add if already exists
+      }
+      return {
+        boards: [...state.boards, board],
+      };
+    });
   },
 
   updateBoard: (boardId, updates) => {
