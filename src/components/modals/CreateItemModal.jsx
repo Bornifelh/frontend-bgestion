@@ -431,6 +431,37 @@ export default function CreateItemModal({ isOpen, onClose }) {
         );
       }
 
+      case 'dropdown': {
+        const options = column.settings?.options || [];
+        return (
+          <div className="flex flex-wrap gap-2">
+            {options.map((opt, i) => {
+              const label = typeof opt === 'object' ? opt.label || opt.value : opt;
+              const val = typeof opt === 'object' ? opt.value : opt;
+              const isSelected = value === val;
+              const COLORS = ['#3b82f6','#22c55e','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899','#f97316','#14b8a6','#6366f1'];
+              const color = COLORS[i % COLORS.length];
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => handleValueChange(column.id, isSelected ? '' : val)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                    isSelected ? 'ring-2 ring-offset-2 ring-primary-500 scale-105' : 'opacity-70 hover:opacity-100'
+                  }`}
+                  style={{ backgroundColor: color, color: 'white' }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+            {options.length === 0 && (
+              <p className="text-sm text-surface-500">Aucune option configurée pour cette colonne.</p>
+            )}
+          </div>
+        );
+      }
+
       default:
         return (
           <input

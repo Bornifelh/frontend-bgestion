@@ -8,6 +8,7 @@ import CheckboxCell from './CheckboxCell';
 import PriorityCell from './PriorityCell';
 import ProgressCell from './ProgressCell';
 import FilesCell from './FilesCell';
+import DropdownCell from './DropdownCell';
 
 const cellComponents = {
   status: StatusCell,
@@ -20,6 +21,7 @@ const cellComponents = {
   progress: ProgressCell,
   files: FilesCell,
   file: FilesCell,
+  dropdown: DropdownCell,
 };
 
 export default function ItemCell({ item, column, value }) {
