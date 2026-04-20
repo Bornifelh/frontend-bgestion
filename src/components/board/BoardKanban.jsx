@@ -10,6 +10,7 @@ import { format, isValid, startOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 import EditItemModal from '../modals/EditItemModal';
+import ItemDetailsModal from '../modals/ItemDetailsModal';
 
 function statusBarColor(statusId, fallbackHex) {
   const s = String(statusId || '').toLowerCase();
@@ -42,6 +43,7 @@ export default function BoardKanban() {
   const [draggedItem, setDraggedItem] = useState(null);
   const [workspaceMembers, setWorkspaceMembers] = useState([]);
   const [editingItem, setEditingItem] = useState(null);
+  const [detailItem, setDetailItem] = useState(null);
   const [wipLimits, setWipLimits] = useState({});
   const [editingWip, setEditingWip] = useState(null);
 
@@ -298,9 +300,9 @@ export default function BoardKanban() {
                       <div className="flex items-start justify-between gap-1">
                         <p
                           className="min-w-0 flex-1 font-semibold leading-snug text-[#173D68] text-sm"
-                          onClick={() => setEditingItem(item)}
+                          onClick={() => setDetailItem(item)}
                           role="button" tabIndex={0}
-                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEditingItem(item); } }}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDetailItem(item); } }}
                         >
                           {item.name}
                         </p>
@@ -314,8 +316,8 @@ export default function BoardKanban() {
                           </button>
                           {activeMenu === item.id && (
                             <div className="absolute right-0 top-6 z-20 min-w-[140px] rounded-xl border border-gray-200 bg-white py-1 shadow-xl">
-                              <button type="button" onClick={() => { setEditingItem(item); setActiveMenu(null); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                <Edit2 className="h-4 w-4" /> Modifier
+                              <button type="button" onClick={() => { setDetailItem(item); setActiveMenu(null); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                <Edit2 className="h-4 w-4" /> Détails
                               </button>
                               <button type="button" onClick={() => handleDeleteItem(item.id)} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50">
                                 <Trash2 className="h-4 w-4" /> Supprimer
@@ -436,6 +438,12 @@ export default function BoardKanban() {
         Ajouter une autre liste
       </button>
 
+      <ItemDetailsModal
+        isOpen={!!detailItem}
+        onClose={() => setDetailItem(null)}
+        item={detailItem}
+        onEdit={(it) => { setDetailItem(null); setEditingItem(it); }}
+      />
       <EditItemModal isOpen={!!editingItem} onClose={() => setEditingItem(null)} item={editingItem} workspaceId={currentBoard?.workspaceId} />
     </div>
   );

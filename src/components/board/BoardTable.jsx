@@ -19,6 +19,7 @@ import { useBoardStore } from "../../stores/boardStore";
 import { itemApi, groupApi } from "../../lib/api";
 import ItemCell from "./cells/ItemCell";
 import EditItemModal from "../modals/EditItemModal";
+import ItemDetailsModal from "../modals/ItemDetailsModal";
 import toast from "react-hot-toast";
 
 const GROUP_COLORS = [
@@ -51,6 +52,7 @@ export default function BoardTable() {
   const [newItemName, setNewItemName] = useState({});
   const [showNewItem, setShowNewItem] = useState({});
   const [editingItem, setEditingItem] = useState(null);
+  const [detailItem, setDetailItem] = useState(null);
 
   const [groupMenu, setGroupMenu] = useState(null);
   const [groupMenuPos, setGroupMenuPos] = useState({ top: 0, left: 0 });
@@ -259,7 +261,7 @@ export default function BoardTable() {
       {/* Name */}
       <div
         className="flex-1 min-w-[200px] px-3 font-medium text-[#173D68] cursor-pointer hover:text-[#F36F21] truncate border-r border-gray-100 flex items-center transition-colors"
-        onClick={() => setEditingItem(item)}
+        onClick={() => setDetailItem(item)}
       >
         {item.name}
       </div>
@@ -488,7 +490,7 @@ export default function BoardTable() {
           <button
             type="button"
             onClick={() => {
-              setEditingItem(items.find((i) => i.id === activeMenu));
+              setDetailItem(items.find((i) => i.id === activeMenu));
               setActiveMenu(null);
             }}
             className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-[#F36F21]/5 hover:text-[#F36F21] transition-colors group/item"
@@ -595,6 +597,13 @@ export default function BoardTable() {
           </button>
         </div>
       )}
+
+      <ItemDetailsModal
+        isOpen={!!detailItem}
+        onClose={() => setDetailItem(null)}
+        item={detailItem}
+        onEdit={(it) => { setDetailItem(null); setEditingItem(it); }}
+      />
 
       <EditItemModal
         isOpen={!!editingItem}

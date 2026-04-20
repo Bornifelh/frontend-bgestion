@@ -365,27 +365,24 @@ export const permissionApi = {
 
 // Files API
 export const fileApi = {
-  upload: async (file, itemId, columnId) => {
+  getByItem: (itemId) => api.get(`/files/item/${itemId}`),
+  upload: async (file, itemId) => {
     const formData = new FormData();
     formData.append('file', file);
     if (itemId) formData.append('itemId', itemId);
-    if (columnId) formData.append('columnId', columnId);
-    
     return api.post('/files/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
   },
-  uploadMultiple: async (files, itemId, columnId) => {
+  uploadMultiple: async (files, itemId) => {
     const formData = new FormData();
-    files.forEach(file => formData.append('files', file));
+    files.forEach(f => formData.append('files', f));
     if (itemId) formData.append('itemId', itemId);
-    if (columnId) formData.append('columnId', columnId);
-    
     return api.post('/files/upload-multiple', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
   },
-  delete: (filename) => api.delete(`/files/${filename}`),
+  delete: (attachmentId) => api.delete(`/files/${attachmentId}`),
 };
 
 // Time Entries API
