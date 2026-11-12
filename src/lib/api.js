@@ -489,3 +489,25 @@ export const ticketApi = {
   assign: (ticketId, data) => api.put(`/tickets/${ticketId}/assign`, data),
   updateStatus: (ticketId, data) => api.put(`/tickets/${ticketId}/status`, data),
 };
+
+// Jira-style issues API (contract: docs/COORDINATION.md §3). Responses are { success, data }.
+export const issuesApi = {
+  list: (boardId, params) => api.get(`/issues/project/${boardId}`, { params }),
+  meta: (boardId) => api.get(`/issues/meta/${boardId}`),
+  get: (id) => api.get(`/issues/${id}`),
+  getByKey: (key) => api.get(`/issues/key/${encodeURIComponent(key)}`),
+  create: (data) => api.post('/issues', data),
+  update: (id, data) => api.patch(`/issues/${id}`, data),
+  rank: (id, data) => api.put(`/issues/${id}/rank`, data),
+  delete: (id) => api.delete(`/issues/${id}`),
+};
+
+// Jira-style sprints (Backlog). Responses are { success, data }.
+export const issueSprintsApi = {
+  list: (boardId, params) => api.get(`/issues/sprints/project/${boardId}`, { params }),
+  create: (data) => api.post('/issues/sprints', data),
+  update: (id, data) => api.patch(`/issues/sprints/${id}`, data),
+  start: (id, data) => api.post(`/issues/sprints/${id}/start`, data),
+  complete: (id, data) => api.post(`/issues/sprints/${id}/complete`, data),
+  delete: (id) => api.delete(`/issues/sprints/${id}`),
+};

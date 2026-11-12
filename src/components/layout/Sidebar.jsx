@@ -213,8 +213,8 @@ export default function Sidebar({ isOpen, onClose }) {
                         {(workspaceBoards[workspace.id] || []).map((board) => (
                           <Link
                             key={board.id}
-                            to={`/board/${board.id}`}
-                            className={`sidebar-item text-xs py-1 ${isActive(`/board/${board.id}`) ? 'text-white' : ''}`}
+                            to={`/project/${board.id}/list`}
+                            className={`sidebar-item text-xs py-1 ${location.pathname.startsWith(`/project/${board.id}`) || isActive(`/board/${board.id}`) ? 'text-white' : ''}`}
                           >
                             <div
                               className="w-5 h-3.5 rounded-sm flex-shrink-0"

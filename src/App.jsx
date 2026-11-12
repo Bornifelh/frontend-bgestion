@@ -41,6 +41,10 @@ const SDSIResources = lazy(() => import('./pages/sdsi/SDSIResources'));
 const SDSIAxes = lazy(() => import('./pages/sdsi/SDSIAxes'));
 const PermissionsSettings = lazy(() => import('./pages/settings/PermissionsSettings'));
 const ITAssetManagement = lazy(() => import('./pages/ITAssetManagement'));
+const ProjectIssues = lazy(() => import('./pages/project/ProjectIssues'));
+const ProjectBoard = lazy(() => import('./pages/project/ProjectBoard'));
+const ProjectBacklog = lazy(() => import('./pages/project/ProjectBacklog'));
+const BrowseIssue = lazy(() => import('./pages/project/BrowseIssue'));
 
 function ProtectedRoute({ children, allowPasswordChange = false }) {
   const { isAuthenticated, isLoading, user } = useAuthStore();
@@ -150,6 +154,12 @@ export default function App() {
             </Route>
 
             <Route path="board/:boardId" element={<SuspendedRoute><Board /></SuspendedRoute>} />
+            {/* Jira-style project views */}
+            <Route path="project/:boardId" element={<Navigate to="list" replace />} />
+            <Route path="project/:boardId/list" element={<SuspendedRoute><ProjectIssues /></SuspendedRoute>} />
+            <Route path="project/:boardId/backlog" element={<SuspendedRoute><ProjectBacklog /></SuspendedRoute>} />
+            <Route path="project/:boardId/board" element={<SuspendedRoute><ProjectBoard /></SuspendedRoute>} />
+            <Route path="browse/:issueKey" element={<SuspendedRoute><BrowseIssue /></SuspendedRoute>} />
             <Route path="it-assets" element={<SuspendedRoute><ITAssetManagement /></SuspendedRoute>} />
             <Route path="settings" element={<SuspendedRoute><Settings /></SuspendedRoute>} />
           </Route>
